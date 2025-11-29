@@ -1,24 +1,45 @@
 import axios from "axios";
 
 export default async function handler(req, res) {
+  // -----------------------------
+  // 1) Méthode HTTP autorisée
+  // -----------------------------
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({
+      status: "error",
+      message: "Only POST requests allowed"
+    });
   }
 
   try {
     const { client, simulation } = req.body;
 
     if (!client || !simulation) {
-      return res.status(400).json({ status: "error", message: "Data missing" });
+      return res.status(400).json({
+        status: "error",
+        message: "Missing client or simulation data"
+      });
     }
 
+    // -----------------------------
+    // 2) ENV variables
+    // -----------------------------
     const ODOO_URL = process.env.ODOO_URL;
     const ODOO_DB = process.env.ODOO_DB;
     const ODOO_USER = process.env.ODOO_USER;
     const ODOO_API_KEY = process.env.ODOO_API_KEY;
 
-    // Auth Odoo
-    const authResp = await axios.post(`${ODOO_URL}/web/session/authenticate`, {
+    if (!ODOO_URL || !ODOO_DB || !ODOO_USER || !ODOO_API_KEY) {
+      return res.status(500).json({
+        status: "error",
+        message: "Missing Odoo environment variables"
+      });
+    }
+
+    // -----------------------------
+    // 3) Authentification Odoo
+    // -----------------------------
+    const authPayload = {
       jsonrpc: "2.0",
       method: "call",
       params: {
@@ -26,19 +47,39 @@ export default async function handler(req, res) {
         login: ODOO_USER,
         password: ODOO_API_KEY
       }
-    });
+    };
 
-    const sessionCookie = authResp.headers["set-cookie"]
-      ?.find(c => c.includes("session_id"))
-      ?.split(";")[0];
+    const authResp = await axios.post(
+      `${ODOO_URL}/web/session/authenticate`,
+      authPayload,
+      { withCredentials: true }
+    );
 
-    if (!sessionCookie) {
-      return res.status(500).json({ error: "No session ID returned by Odoo" });
+    const cookies = authResp.headers["set-cookie"];
+    if (!cookies) {
+      return res.status(500).json({
+        status: "error",
+        message: "Odoo authentication failed (no session cookie)"
+      });
     }
 
-    const cookie = sessionCookie;
+    const session_id = cookies
+      .find(c => c.includes("session_id"))
+      ?.split(";")[0]
+      ?.replace("session_id=", "");
 
-    // Créer lead
+    if (!session_id) {
+      return res.status(500).json({
+        status: "error",
+        message: "Odoo session ID not found"
+      });
+    }
+
+    const cookie = `session_id=${session_id}`;
+
+    // -----------------------------
+    // 4) Création opportunité CRM
+    // -----------------------------
     const leadData = {
       name: `Commande Batterie – ${client.firstname} ${client.lastname}`,
       contact_name: `${client.firstname} ${client.lastname}`,
@@ -83,7 +124,9 @@ ${simulation.payback_text}
 
     const leadId = leadResp.data.result;
 
-    // Créer le devis
+    // -----------------------------
+    // 5) Création d'un devis
+    // -----------------------------
     const quotationResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -104,18 +147,22 @@ ${simulation.payback_text}
     );
 
     const quotationId = quotationResp.data.result;
+
     const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
 
-    res.json({
+    // -----------------------------
+    // SUCCESS
+    // -----------------------------
+    return res.status(200).json({
       status: "success",
-      redirect_url: quotationUrl
+      quotation_url: quotationUrl
     });
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
+  } catch (error) {
+    return res.status(500).json({
       status: "error",
-      message: err.message
+      message: "Server error",
+      detail: error.toString()
     });
   }
 }
