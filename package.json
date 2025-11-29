@@ -1,5 +1,9 @@
 {
   "name": "wenergy-api",
   "version": "1.0.0",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "axios": "latest",
+    "express": "latest"
+  }
 }
