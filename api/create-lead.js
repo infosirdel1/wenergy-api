@@ -2,28 +2,59 @@ import axios from "axios";
 
 export default async function handler(req, res) {
 
+ import axios from "axios";
+
+export default async function handler(req, res) {
+
   // -----------------------------
-// 0) CORS
-// -----------------------------
-res.setHeader("Access-Control-Allow-Origin", "*");
-res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // CORS — version FIX VERCEL
+  // -----------------------------
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "*");
 
-// Préflight (OPTIONS)
-if (req.method === "OPTIONS") {
-  return res.status(200).end();
+  // Réponse au préflight OPTIONS
+  if (req.method === "OPTIONS") {
+    return res.status(200).json({ status: "ok" });
+  }
+
+  // -----------------------------
+  // only POST
+  // -----------------------------
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      status: "error",
+      message: "Only POST allowed"
+    });
+  }
+
+  try {
+    console.log("⏳ Requête reçue :", req.body);
+
+    const { client, simulation } = req.body;
+
+    if (!client || !simulation) {
+      return res.status(400).json({
+        status: "error",
+        message: "Missing data"
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      debug: "POST OK — CORS FIXED"
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      status: "error",
+      message: "Server crashed",
+      detail: err.toString()
+    });
+  }
 }
-
-// -----------------------------
-// 1) POST uniquement
-// -----------------------------
-if (req.method !== "POST") {
-  return res.status(405).json({
-    status: "error",
-    message: "Only POST requests allowed"
-  });
-}
-
     // -------------------------------------------------------
     // 2) Variables d’environnement
     // -------------------------------------------------------
