@@ -160,6 +160,7 @@ ${simulation.payback_text}
     console.log("📄 Devis response:", quotationResp.data);
 
     const quotationId = quotationResp.data.result;
+    console.log("📄 ODOO RAW RESPONSE QUOTATION =", JSON.stringify(quotationResp.data, null, 2));
     if (!quotationId) {
       throw new Error("Devis non créé (pas d'ID retourné par Odoo)");
     }
