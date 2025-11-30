@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     };
 
     const authResp = await axios.post(
-  `${ODOO_URL}/web/session/authenticate_api`,
+  `${ODOO_URL}/web/session/authenticate`,
   {
     jsonrpc: "2.0",
     params: {
