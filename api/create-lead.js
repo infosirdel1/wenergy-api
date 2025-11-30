@@ -2,26 +2,22 @@ import axios from "axios";
 
 export default async function handler(req, res) {
 
- import axios from "axios";
-
-export default async function handler(req, res) {
-
-  // -----------------------------
-  // CORS — version FIX VERCEL
-  // -----------------------------
+  // -------------------------------------------------------
+  // 0) CORS — indispensable pour Vercel
+  // -------------------------------------------------------
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
 
-  // Réponse au préflight OPTIONS
+  // Réponse aux préflight OPTIONS
   if (req.method === "OPTIONS") {
     return res.status(200).json({ status: "ok" });
   }
 
-  // -----------------------------
-  // only POST
-  // -----------------------------
+  // -------------------------------------------------------
+  // 1) Only POST
+  // -------------------------------------------------------
   if (req.method !== "POST") {
     return res.status(405).json({
       status: "error",
@@ -30,7 +26,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log("⏳ Requête reçue :", req.body);
+    console.log("📩 Requête reçue :", req.body);
 
     const { client, simulation } = req.body;
 
@@ -41,20 +37,6 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(200).json({
-      status: "success",
-      debug: "POST OK — CORS FIXED"
-    });
-
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      status: "error",
-      message: "Server crashed",
-      detail: err.toString()
-    });
-  }
-}
     // -------------------------------------------------------
     // 2) Variables d’environnement
     // -------------------------------------------------------
@@ -193,6 +175,7 @@ ${simulation.payback_text}
     });
 
   } catch (error) {
+    console.error(error);
     return res.status(500).json({
       status: "error",
       message: "Server error",
