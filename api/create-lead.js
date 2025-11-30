@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({
       status: "error",
-      message: "Only POST allowed"
+      message: "Only POST allowed",
     });
   }
 
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     if (!client || !simulation) {
       return res.status(400).json({
         status: "error",
-        message: "Missing data"
+        message: "Missing data",
       });
     }
 
@@ -48,53 +48,44 @@ export default async function handler(req, res) {
     if (!ODOO_URL || !ODOO_DB || !ODOO_USER || !ODOO_API_KEY) {
       return res.status(500).json({
         status: "error",
-        message: "Missing Odoo environment variables"
+        message: "Missing Odoo environment variables",
       });
     }
 
     // -------------------------------------------------------
-    // 3) Authentification Odoo
+    // 3) Authentification Odoo (API key = password)
     // -------------------------------------------------------
-    const authPayload = {
-      jsonrpc: "2.0",
-      method: "call",
-      params: {
-        db: ODOO_DB,
-        login: ODOO_USER,
-        password: ODOO_API_KEY
-      }
-    };
-
     const authResp = await axios.post(
-  `${ODOO_URL}/web/session/authenticate`,
-  {
-    jsonrpc: "2.0",
-    params: {
-      db: ODOO_DB,
-      login: ODOO_USER,
-      password: ODOO_API_KEY
-    }
-  },
-  { withCredentials: true }
-);
+      `${ODOO_URL}/web/session/authenticate`,
+      {
+        jsonrpc: "2.0",
+        method: "call",
+        params: {
+          db: ODOO_DB,
+          login: ODOO_USER,
+          password: ODOO_API_KEY,
+        },
+      },
+      { withCredentials: true }
+    );
 
     const cookies = authResp.headers["set-cookie"];
     if (!cookies) {
       return res.status(500).json({
         status: "error",
-        message: "Odoo authentication failed (no session cookie)"
+        message: "Odoo authentication failed (no session cookie)",
       });
     }
 
     const session_id = cookies
-      .find(c => c.includes("session_id"))
+      .find((c) => c.includes("session_id"))
       ?.split(";")[0]
       ?.replace("session_id=", "");
 
     if (!session_id) {
       return res.status(500).json({
         status: "error",
-        message: "Odoo session ID not found"
+        message: "Odoo session ID not found",
       });
     }
 
@@ -127,7 +118,7 @@ ${simulation.summary_html}
 Payback :
 ${simulation.payback_text}
       `,
-      type: "opportunity"
+      type: "opportunity",
     };
 
     const leadResp = await axios.post(
@@ -139,8 +130,8 @@ ${simulation.payback_text}
           model: "crm.lead",
           method: "create",
           args: [leadData],
-          kwargs: {}
-        }
+          kwargs: {},
+        },
       },
       { headers: { Cookie: cookie } }
     );
@@ -158,13 +149,15 @@ ${simulation.payback_text}
         params: {
           model: "sale.order",
           method: "create",
-          args: [{
-            partner_id: false,
-            opportunity_id: leadId,
-            note: "Devis généré automatiquement via simulateur Wenergy"
-          }],
-          kwargs: {}
-        }
+          args: [
+            {
+              partner_id: false,
+              opportunity_id: leadId,
+              note: "Devis généré automatiquement via simulateur Wenergy",
+            },
+          ],
+          kwargs: {},
+        },
       },
       { headers: { Cookie: cookie } }
     );
@@ -178,15 +171,14 @@ ${simulation.payback_text}
     // -------------------------------------------------------
     return res.status(200).json({
       status: "success",
-      redirect_url: quotationUrl
+      redirect_url: quotationUrl,
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({
       status: "error",
       message: "Server error",
-      detail: error.toString()
+      detail: error.toString(),
     });
   }
 }
