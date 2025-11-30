@@ -136,7 +136,10 @@ ${simulation.payback_text}
       }
     );
 
-    const quotationId = quotationResp.data.result;
+    const quotationId =
+  (Array.isArray(quotationResp.data.result)
+    ? quotationResp.data.result[0]
+    : quotationResp.data.result.id);
 
     const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
 
