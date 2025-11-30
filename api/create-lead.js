@@ -66,10 +66,17 @@ export default async function handler(req, res) {
     };
 
     const authResp = await axios.post(
-      `${ODOO_URL}/web/session/authenticate`,
-      authPayload,
-      { withCredentials: true }
-    );
+  `${ODOO_URL}/web/session/authenticate_api`,
+  {
+    jsonrpc: "2.0",
+    params: {
+      db: ODOO_DB,
+      login: ODOO_USER,
+      password: ODOO_API_KEY
+    }
+  },
+  { withCredentials: true }
+);
 
     const cookies = authResp.headers["set-cookie"];
     if (!cookies) {
