@@ -1,7 +1,6 @@
 import axios from "axios";
 
 export default async function handler(req, res) {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
@@ -9,115 +8,100 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).json({});
 
   try {
-    console.log("📩 Incoming body:", req.body);
-
     const { client, simulation } = req.body;
 
-    // 🌍 ENV VARIABLES
     const ODOO_URL = process.env.ODOO_URL;
     const ODOO_DB = process.env.ODOO_DB;
     const ODOO_USER = process.env.ODOO_USER;
-    const ODOO_PASSWORD = process.env.ODOO_PASSWORD; // 🔥 IMPORTANT
+    const ODOO_API_KEY = process.env.ODOO_API_KEY;
 
-    if (!ODOO_PASSWORD) {
-      throw new Error("❌ ODOO_PASSWORD manquant dans Vercel !");
-    }
-
-    console.log("🔐 Auth →", `${ODOO_URL}/web/session/authenticate`);
-
-    // 1️⃣ AUTH ODOO → GET session_id
+    // 1) AUTH
     const authResp = await axios.post(
       `${ODOO_URL}/web/session/authenticate`,
       {
         jsonrpc: "2.0",
         method: "call",
-        id: Date.now(),
         params: {
           db: ODOO_DB,
           login: ODOO_USER,
-          password: ODOO_PASSWORD,
+          password: ODOO_API_KEY,
         },
+        id: Date.now(),
       },
-      { withCredentials: true }
+      { headers: { "Content-Type": "application/json" } }
     );
 
-    console.log("🔐 Auth Response:", authResp.data);
-
     const cookies = authResp.headers["set-cookie"];
-    if (!cookies) throw new Error("❌ Aucun cookie retourné par Odoo.");
+    if (!cookies) throw new Error("No session cookie returned");
 
     const session_id = cookies
       .find((c) => c.includes("session_id"))
       ?.split(";")[0]
       ?.replace("session_id=", "");
 
-    if (!session_id) throw new Error("❌ Session ID introuvable.");
+    if (!session_id) throw new Error("Session ID not found in cookies");
 
     const cookieHeader = `session_id=${session_id}`;
-    console.log("🍪 Session ID:", session_id);
 
-    // 2️⃣ CREATE LEAD
-    console.log("📝 Création du lead…");
-
+    // 2) CREATE LEAD
     const leadResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
         jsonrpc: "2.0",
         method: "call",
-        id: Date.now(),
         params: {
           model: "crm.lead",
           method: "create",
           args: [
             {
-              name: `Simulation – ${client?.nom || "Client"}`,
-              contact_name: client?.nom || "",
-              email_from: client?.email || "",
-              phone: client?.telephone || "",
+              name: `Demande simulateur – ${client.firstname} ${client.lastname}`,
+              contact_name: `${client.firstname} ${client.lastname}`,
+              email_from: client.email,
+              phone: client.phone,
               description: JSON.stringify(simulation, null, 2),
+              street: client.address,
+              zip: client.zip,
+              city: client.city,
+              type: "opportunity",
             },
           ],
           kwargs: {},
         },
+        id: Date.now(),
       },
       { headers: { Cookie: cookieHeader } }
     );
 
     const leadId = leadResp.data.result;
-    if (!leadId) throw new Error("❌ Lead non créé.");
+    if (!leadId) throw new Error("Lead non créé");
 
-    console.log("🟢 Lead créé :", leadId);
-
-    // 3️⃣ CREATE QUOTATION
-    console.log("📄 Création du devis…");
-
+    // 3) CREATE QUOTATION
     const quotationResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
         jsonrpc: "2.0",
         method: "call",
-        id: Date.now(),
         params: {
           model: "sale.order",
           method: "create",
           args: [
             {
-              partner_id: false, // pas de fiche client encore
+              partner_id: false,
               opportunity_id: leadId,
-              note: "Devis généré automatiquement via le simulateur Wenergy",
+              note: "Devis généré automatiquement via simulateur Wenergy",
             },
           ],
           kwargs: {},
         },
+        id: Date.now(),
       },
       { headers: { Cookie: cookieHeader } }
     );
 
     const quotationId = quotationResp.data.result;
-    if (!quotationId) throw new Error("❌ Devis non créé.");
+    if (!quotationId) throw new Error("Devis non créé");
 
-    console.log("🟢 Devis créé :", quotationId);
-
+    // URL du devis pour Odoo
     const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
 
     return res.status(200).json({
@@ -126,8 +110,9 @@ export default async function handler(req, res) {
       lead_id: leadId,
       redirect_url: quotationUrl,
     });
+
   } catch (err) {
-    console.error("❌ ERREUR :", err.response?.data || err);
+    console.error("❌ ERREUR ODOO :", err.response?.data || err);
     return res.status(500).json({
       status: "error",
       detail: err.response?.data || err.toString(),
