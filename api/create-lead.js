@@ -98,6 +98,12 @@ Capacité totale : ${simulation.total_capacity} kWh
 Batteries : ${simulation.battery_count}
 PV : ${simulation.has_pv}
 Fournisseur : ${simulation.supplier}
+
+Résumé :
+${simulation.summary_html}
+
+Payback :
+${simulation.payback_text}
               `,
             },
           ],
@@ -113,7 +119,44 @@ Fournisseur : ${simulation.supplier}
     const leadId = leadResp.data.result;
     if (!leadId) throw new Error("Lead non créé");
 
-    // 3) CREATE QUOTATION (sale.order)
+    // 3) CREATE PARTNER (res.partner)
+    console.log("👤 Création du client…");
+
+    const partnerResp = await axios.post(
+      `${ODOO_URL}/web/dataset/call_kw`,
+      {
+        jsonrpc: "2.0",
+        method: "call",
+        params: {
+          model: "res.partner",
+          method: "create",
+          args: [
+            {
+              name: `${client.firstname} ${client.lastname}`,
+              email: client.email,
+              phone: client.phone,
+              street: client.address,
+              zip: client.zip,
+              city: client.city,
+              type: "contact",
+              customer_rank: 1,
+            },
+          ],
+          kwargs: {},
+        },
+        id: Date.now(),
+      },
+      { headers: { Cookie: cookieHeader } }
+    );
+
+    console.log("👤 Partner response:", partnerResp.data);
+
+    const partnerId = partnerResp.data.result;
+    if (!partnerId) {
+      throw new Error("Client non créé (partner_id manquant)");
+    }
+
+    // 4) CREATE QUOTATION (sale.order)
     console.log("📄 Création du devis…");
 
     const quotationResp = await axios.post(
@@ -126,7 +169,7 @@ Fournisseur : ${simulation.supplier}
           method: "create",
           args: [
             {
-              partner_id: false,
+              partner_id: partnerId,
               note: "Devis généré automatiquement via simulateur Wenergy",
             },
           ],
@@ -140,17 +183,17 @@ Fournisseur : ${simulation.supplier}
     console.log("📄 Devis response:", quotationResp.data);
 
     const quotationId = quotationResp.data.result;
-    if (!quotationId) throw new Error("Devis non créé");
+    if (!quotationId) throw new Error("Devis non créé (pas d'ID retourné par Odoo)");
 
     const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
 
     return res.status(200).json({
       status: "success",
       lead_id: leadId,
+      partner_id: partnerId,
       quotation_id: quotationId,
       redirect_url: quotationUrl,
     });
-
   } catch (err) {
     console.error("❌ ERREUR ODOO :", err.response?.data || err);
     return res.status(500).json({
