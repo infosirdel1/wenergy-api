@@ -15,68 +15,51 @@ export default async function handler(req, res) {
     const ODOO_USER = process.env.ODOO_USER;
     const ODOO_API_KEY = process.env.ODOO_API_KEY;
 
-    // 1️⃣ AUTH ODOO → session_id obligatoire
-    const authResp = await axios.post(
-      `${ODOO_URL}/web/session/authenticate`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          db: ODOO_DB,
-          login: ODOO_USER,
-          password: ODOO_API_KEY,
-        },
-        id: Date.now()
-      }
-    );
+    // 1️⃣ AUTH ODOO → session_id
+console.log("🔐 Auth Odoo – URL =", `${ODOO_URL}/web/session/authenticate`);
+console.log("🔐 Auth Odoo – DB =", ODOO_DB);
+console.log("🔐 Auth Odoo – USER =", ODOO_USER);
 
-    const cookies = authResp.headers["set-cookie"];
-    if (!cookies) throw new Error("No session cookie from Odoo");
+const authResp = await axios.post(
+  `${ODOO_URL}/web/session/authenticate`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      db: ODOO_DB,
+      login: ODOO_USER,
+      password: ODOO_API_KEY,
+    },
+    id: Date.now(),
+  },
+  {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    // (withCredentials ne change rien en Node, mais on le laisse)
+    withCredentials: true,
+  }
+);
 
-    const session_id = cookies
-      .find(c => c.includes("session_id"))
-      ?.split(";")[0]
-      ?.replace("session_id=", "");
+console.log("🔐 Auth Odoo – status =", authResp.status);
+console.log("🔐 Auth Odoo – data   =", authResp.data);
+console.log("🔐 Auth Odoo – cookies=", authResp.headers["set-cookie"]);
 
-    if (!session_id) throw new Error("Session ID not found");
+const cookies = authResp.headers["set-cookie"];
+if (!cookies) {
+  throw new Error("No session cookie from Odoo (set-cookie vide)");
+}
 
-    const cookieHeader = `session_id=${session_id}`;
+const session_id = cookies
+  .find((c) => c.includes("session_id"))
+  ?.split(";")[0]
+  ?.replace("session_id=", "");
 
-    // 2️⃣ CREATE LEAD
-    const leadResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "crm.lead",
-          method: "create",
-          args: [{
-            name: `Commande Batterie – ${client.firstname} ${client.lastname}`,
-            contact_name: `${client.firstname} ${client.lastname}`,
-            email_from: client.email,
-            phone: client.phone,
-            street: client.address,
-            zip: client.zip,
-            city: client.city,
-            type: "opportunity",
-            description: `
-Consommation : ${simulation.consumption}
-Modèle : ${simulation.battery_model_name}
-Capacité : ${simulation.total_capacity} kWh
-Payback : ${simulation.payback_text}
-            `,
-          }],
-          kwargs: {},
-        },
-        id: Date.now(),
-      },
-      {
-        headers: {
-          Cookie: cookieHeader
-        }
-      }
-    );
+if (!session_id) {
+  throw new Error("Session ID not found in cookies");
+}
+
+const cookieHeader = `session_id=${session_id}`;
 
     const leadId = leadResp.data.result;
     if (!leadId) throw new Error("Lead creation failed");
