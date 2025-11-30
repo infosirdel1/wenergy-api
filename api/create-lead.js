@@ -97,49 +97,43 @@ export default async function handler(req, res) {
       throw new Error("Lead non créé");
     }
 
-    // 3) CREATE QUOTATION (sale.order)
-    const quotationResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "sale.order",
-          method: "create",
-          args: [
-            {
-              partner_id: false,
-              opportunity_id: leadId,
-              note: "Devis généré automatiquement via simulateur Wenergy",
-            },
-          ],
-          kwargs: {},
-        },
-        id: Date.now(),
+   // 3) CREATE QUOTATION — DEBUG EXTENDED
+let quotationResp;
+
+try {
+  quotationResp = await axios.post(
+    `${ODOO_URL}/web/dataset/call_kw`,
+    {
+      jsonrpc: "2.0",
+      method: "call",
+      params: {
+        model: "sale.order",
+        method: "create",
+        args: [
+          {
+            partner_id: false,
+            opportunity_id: leadId,
+            note: "Devis généré automatiquement via simulateur Wenergy",
+          },
+        ],
+        kwargs: {},
       },
-      {
-        headers: { Cookie: cookieHeader },
-      }
-    );
-
-    const quotationId = quotationResp.data.result;
-    if (!quotationId) {
-      throw new Error("Devis non créé");
+      id: Date.now(),
+    },
+    {
+      headers: { Cookie: cookieHeader },
     }
+  );
+} catch (e) {
+  console.error("❌ ODOO QUOTATION ERROR RAW:", e.response?.data || e);
+  throw new Error("Odoo a renvoyé une erreur lors de la création du devis");
+}
 
-    const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
+console.log("🧾 ODOO QUOTATION RAW RESPONSE:", quotationResp.data);
 
-    return res.status(200).json({
-      status: "success",
-      quotation_id: quotationId,
-      lead_id: leadId,
-      redirect_url: quotationUrl,
-    });
-  } catch (err) {
-    console.error("❌ ERREUR ODOO :", err.response?.data || err);
-    return res.status(500).json({
-      status: "error",
-      detail: err.response?.data || err.toString(),
-    });
-  }
+const quotationId = quotationResp.data.result;
+
+if (!quotationId) {
+  console.error("⚠️ Odoo n’a pas renvoyé d’ID de devis :", quotationResp.data);
+  throw new Error("Devis non créé : Odoo n’a pas renvoyé d’ID");
 }
