@@ -18,11 +18,11 @@ export default async function handler(req, res) {
   // 1) Vérification méthode
   // -------------------------------------------------------
   if (req.method !== "POST") {
-    return res.status(405).json({
-      status: "error",
-      message: "Only POST requests allowed"
-    });
-  }
+  return res.status(405).json({
+    status: "error",
+    message: "Only POST requests allowed"
+  });
+}
 
   try {
     const { client, simulation } = req.body;
