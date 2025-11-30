@@ -1,6 +1,19 @@
 import axios from "axios";
 
 export default async function handler(req, res) {
+
+  // -----------------------------
+  // 0) CORS
+  // -----------------------------
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Pré-vol CORS
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   // -----------------------------
   // 1) Méthode HTTP autorisée
   // -----------------------------
@@ -99,70 +112,4 @@ PV : ${simulation.has_pv}
 Fournisseur : ${simulation.supplier}
 
 Résumé :
-${simulation.summary_html}
-
-Payback :
-${simulation.payback_text}
-      `,
-      type: "opportunity"
-    };
-
-    const leadResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "crm.lead",
-          method: "create",
-          args: [leadData],
-          kwargs: {}
-        }
-      },
-      { headers: { Cookie: cookie } }
-    );
-
-    const leadId = leadResp.data.result;
-
-    // -----------------------------
-    // 5) Création d'un devis
-    // -----------------------------
-    const quotationResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "sale.order",
-          method: "create",
-          args: [{
-            partner_id: false,
-            opportunity_id: leadId,
-            note: "Devis généré automatiquement via simulateur Wenergy"
-          }],
-          kwargs: {}
-        }
-      },
-      { headers: { Cookie: cookie } }
-    );
-
-    const quotationId = quotationResp.data.result;
-
-    const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
-
-    // -----------------------------
-    // SUCCESS
-    // -----------------------------
-    return res.status(200).json({
-      status: "success",
-      quotation_url: quotationUrl
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      status: "error",
-      message: "Server error",
-      detail: error.toString()
-    });
-  }
-}
+${simulation.su
