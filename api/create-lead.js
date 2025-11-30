@@ -99,7 +99,10 @@ ${simulation.payback_text}
       }
     );
 
-    const leadId = leadResp.data.result;
+    const leadId =
+  (Array.isArray(leadResp.data.result) 
+    ? leadResp.data.result[0] 
+    : leadResp.data.result.id);
 
     // -------------------------------------------------------
     // 3) Création du devis (sale.order)
