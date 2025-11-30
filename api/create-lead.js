@@ -2,37 +2,27 @@ import axios from "axios";
 
 export default async function handler(req, res) {
 
-  // -------------------------------------------------------
-  // 0) CORS - Obligatoire pour empêcher l’erreur 405/Preflight
-  // -------------------------------------------------------
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // -----------------------------
+// 0) CORS
+// -----------------------------
+res.setHeader("Access-Control-Allow-Origin", "*");
+res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Réponse au préflight
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+// Préflight (OPTIONS)
+if (req.method === "OPTIONS") {
+  return res.status(200).end();
+}
 
-  // -------------------------------------------------------
-  // 1) Vérification méthode
-  // -------------------------------------------------------
-  if (req.method !== "POST") {
+// -----------------------------
+// 1) POST uniquement
+// -----------------------------
+if (req.method !== "POST") {
   return res.status(405).json({
     status: "error",
     message: "Only POST requests allowed"
   });
 }
-
-  try {
-    const { client, simulation } = req.body;
-
-    if (!client || !simulation) {
-      return res.status(400).json({
-        status: "error",
-        message: "Missing client or simulation data"
-      });
-    }
 
     // -------------------------------------------------------
     // 2) Variables d’environnement
