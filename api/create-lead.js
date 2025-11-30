@@ -130,54 +130,50 @@ ${simulation.payback_text}
       throw new Error("Lead non créé (pas d'ID retourné par Odoo)");
     }
 
-    // 3) CREATE QUOTATION (sale.order)
-    console.log("📄 Création du devis…");
+   // 3) CREATE QUOTATION (sale.order)
+console.log("📄 Création du devis…");
 
-    const quotationResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "sale.order",
-          method: "create",
-          args: [
-            {
-              partner_id: false,
-              opportunity_id: leadId,
-              note: "Devis généré automatiquement via simulateur Wenergy",
-            },
-          ],
-          kwargs: {},
+const quotationResp = await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "sale.order",
+      method: "create",
+      args: [
+        {
+          partner_id: false,
+          // ❌ opportunity_id retiré car le champ n'existe pas en Odoo 19
+          note: "Devis généré automatiquement via simulateur Wenergy",
         },
-        id: Date.now(),
-      },
-      {
-        headers: { Cookie: cookieHeader },
-      }
-    );
-
-    console.log("📄 Devis response:", quotationResp.data);
-
-    const quotationId = quotationResp.data.result;
-    console.log("📄 ODOO RAW RESPONSE QUOTATION =", JSON.stringify(quotationResp.data, null, 2));
-    if (!quotationId) {
-      throw new Error("Devis non créé (pas d'ID retourné par Odoo)");
-    }
-
-    const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
-
-    return res.status(200).json({
-      status: "success",
-      lead_id: leadId,
-      quotation_id: quotationId,
-      redirect_url: quotationUrl,
-    });
-  } catch (err) {
-    console.error("❌ ERREUR ODOO :", err.response?.data || err);
-    return res.status(500).json({
-      status: "error",
-      detail: err.response?.data || err.toString(),
-    });
+      ],
+      kwargs: {},
+    },
+    id: Date.now(),
+  },
+  {
+    headers: { Cookie: cookieHeader },
   }
+);
+
+console.log("📄 Devis response:", quotationResp.data);
+
+const quotationId = quotationResp.data.result;
+console.log(
+  "📄 ODOO RAW RESPONSE QUOTATION =",
+  JSON.stringify(quotationResp.data, null, 2)
+);
+
+if (!quotationId) {
+  throw new Error("Devis non créé (pas d'ID retourné par Odoo)");
 }
+
+const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
+
+return res.status(200).json({
+  status: "success",
+  lead_id: leadId,
+  quotation_id: quotationId,
+  redirect_url: quotationUrl,
+});
