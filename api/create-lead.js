@@ -70,29 +70,32 @@ export default async function handler(req, res) {
     console.log("🍪 Session ID:", session_id);
 
     // 2) CREATE LEAD
-    console.log("📝 Création du lead…");
+console.log("📝 Création du lead…");
 
-    const leadResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "crm.lead",
-          method: "create",
-          args: [
-            {
-              name: `Demande simulateur – ${client.firstname} ${client.lastname}`,
-              contact_name: `${client.firstname} ${client.lastname}`,
-              email_from: client.email,
-              phone: client.phone,
-              street: client.address,
-              zip: client.zip,
-              city: client.city,
-              type: "opportunity",
-              partner_name: client.company || undefined, // société sur le lead
-              vat: client.vat || undefined,              // ✅ TVA sur le lead
-              description: `
+const leadResp = await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "crm.lead",
+      method: "create",
+      args: [
+        {
+          name: `Demande simulateur – ${client.firstname} ${client.lastname}`,
+          contact_name: `${client.firstname} ${client.lastname}`,
+          email_from: client.email,
+          phone: client.phone,
+          street: client.address,
+          zip: client.zip,
+          city: client.city,
+          type: "opportunity",
+          partner_name: client.company || undefined, // OK
+          // ❌ NE PAS METTRE "vat" ICI, ODOO LE REFUSE
+          
+          description: `
+TVA : ${client.vat || ""}
+
 Simulation Wenergy
 Consommation : ${simulation.consumption}
 Modèle : ${simulation.battery_model_name}
@@ -100,22 +103,21 @@ Capacité totale : ${simulation.total_capacity} kWh
 Batteries : ${simulation.battery_count}
 PV : ${simulation.has_pv}
 Fournisseur : ${simulation.supplier}
-TVA : ${client.vat || ""}
 
 Résumé :
 ${simulation.summary_html}
 
 Payback :
 ${simulation.payback_text}
-              `,
-            },
-          ],
-          kwargs: {},
+          `,
         },
-        id: Date.now(),
-      },
-      { headers: { Cookie: cookieHeader } }
-    );
+      ],
+      kwargs: {},
+    },
+    id: Date.now(),
+  },
+  { headers: { Cookie: cookieHeader } }
+);
 
     console.log("📝 Lead response:", leadResp.data);
 
