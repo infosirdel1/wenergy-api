@@ -90,6 +90,8 @@ export default async function handler(req, res) {
               zip: client.zip,
               city: client.city,
               type: "opportunity",
+              partner_name: client.company || undefined, // société sur le lead
+              vat: client.vat || undefined,              // ✅ TVA sur le lead
               description: `
 Simulation Wenergy
 Consommation : ${simulation.consumption}
@@ -98,6 +100,7 @@ Capacité totale : ${simulation.total_capacity} kWh
 Batteries : ${simulation.battery_count}
 PV : ${simulation.has_pv}
 Fournisseur : ${simulation.supplier}
+TVA : ${client.vat || ""}
 
 Résumé :
 ${simulation.summary_html}
@@ -132,7 +135,7 @@ ${simulation.payback_text}
           method: "create",
           args: [
             {
-              name: `${client.firstname} ${client.lastname}`,
+              name: client.company || `${client.firstname} ${client.lastname}`, // société si présente
               email: client.email,
               phone: client.phone,
               street: client.address,
@@ -140,6 +143,7 @@ ${simulation.payback_text}
               city: client.city,
               type: "contact",
               customer_rank: 1,
+              vat: client.vat || undefined, // ✅ TVA sur le partenaire
             },
           ],
           kwargs: {},
