@@ -195,6 +195,51 @@ ${simulation.payback_text}
 
     const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
 
+    // 5) ADD PRODUCT LINE TO QUOTATION
+console.log("📦 Ajout de la ligne produit…");
+
+const PRODUCT_MAPPING = {
+  small_2: 3,
+  small_25: 4,
+  medium_5: 5,
+  medium_75: 6,
+  large_10: 7,
+  large_15: 8,
+};
+
+const productId = PRODUCT_MAPPING[order_product];
+
+if (!productId) {
+  throw new Error(`No product ID found for code: ${order_product}`);
+}
+
+const lineResp = await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "sale.order.line",
+      method: "create",
+      args: [
+        {
+          order_id: quotationId,
+          product_id: productId,
+          product_uom_qty: 1,
+        },
+      ],
+      kwargs: {},
+    },
+    id: Date.now(),
+  },
+  { headers: { Cookie: cookieHeader } }
+);
+
+console.log("📦 Ligne produit ajoutée :", lineResp.data);
+
+if (!lineResp.data.result) {
+  throw new Error("Échec création ligne devis");
+}
     return res.status(200).json({
       status: "success",
       lead_id: leadId,
