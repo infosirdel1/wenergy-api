@@ -19,6 +19,8 @@ export default async function handler(req, res) {
 
   try {
     const { client, simulation } = req.body || {};
+    
+    const { order_product } = req.body;
 
     if (!client || !simulation) {
       return res.status(400).json({
