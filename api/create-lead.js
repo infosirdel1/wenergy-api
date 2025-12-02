@@ -195,38 +195,15 @@ ${simulation.payback_text}
 
     const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
 
-   // -------------------------------------------------------
-// ⭐ 5) ADD PRODUCT LINE TO QUOTATION ⭐
+  // -------------------------------------------------------
+// ⭐ 5) AJOUT DE LA LIGNE PRODUIT DANS LE DEVIS ⭐
 // -------------------------------------------------------
 console.log("📦 Ajout de la ligne produit…");
 console.log("💥 order_product reçu :", order_product);
 
-// Mapping simulateur → ID produit Odoo
-const PRODUCT_MAPPING = {
-  small_2: 3,
-  small_25: 4,
-  medium_5: 5,
-  medium_75: 6,
-  large_10: 7,
-  large_15: 8,
-};
-
-// On extrait un "code produit" utilisable, même si le front envoie un objet
-const productCode =
-  typeof order_product === "string"
-    ? order_product
-    : order_product?.code || order_product?.id || order_product?.value;
-
-console.log("🔥 productCode utilisé pour le mapping:", productCode);
-
-if (!productCode) {
+// Validation basique
+if (!order_product || !order_product.odoo_product_id) {
   throw new Error("No product code provided (order_product vide ou invalide)");
-}
-
-const productId = PRODUCT_MAPPING[productCode];
-
-if (!productId) {
-  throw new Error(`No product ID found for code: ${productCode}`);
 }
 
 const lineResp = await axios.post(
@@ -240,8 +217,10 @@ const lineResp = await axios.post(
       args: [
         {
           order_id: quotationId,
-          product_id: productId,
-          product_uom_qty: 1,
+          product_id: order_product.odoo_product_id,   // ⭐ DIRECT
+          product_uom_qty: order_product.quantity || 1,
+          price_unit: order_product.unit_price || 0,   // ⭐ Optionnel
+          name: order_product.name || "Produit",
         },
       ],
       kwargs: {},
