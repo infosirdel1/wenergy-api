@@ -191,6 +191,31 @@ ${simulation.payback_text}
     console.log("📄 Devis response:", quotationResp.data);
 
     const quotationId = quotationResp.data.result;
+
+    // 🔗 Récupération du lien portail pour la signature
+console.log("🔗 Récupération URL portail…");
+
+const portalResp = await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "sale.order",
+      method: "get_portal_url",
+      args: [quotationId],
+      kwargs: {},
+    },
+    id: Date.now(),
+  },
+  { headers: { Cookie: cookieHeader } }
+);
+
+console.log("🔗 URL portail:", portalResp.data);
+
+const portalUrl = portalResp.data.result;
+if (!portalUrl) throw new Error("Impossible de récupérer l’URL portail Odoo");
+
     if (!quotationId) throw new Error("Devis non créé (pas d'ID retourné par Odoo)");
 
     const quotationUrl = `${ODOO_URL}/web#id=${quotationId}&model=sale.order&view_type=form`;
@@ -236,13 +261,15 @@ if (!lineResp.data.result) {
   throw new Error("Échec création ligne devis");
 }
 
-    return res.status(200).json({
-      status: "success",
-      lead_id: leadId,
-      partner_id: partnerId,
-      quotation_id: quotationId,
-      redirect_url: quotationUrl,
-    });
+   return res.status(200).json({
+  status: "success",
+  lead_id: leadId,
+  partner_id: partnerId,
+  quotation_id: quotationId,
+  redirect_url: quotationUrl,
+  portal_url: portalUrl
+});
+
   } catch (err) {
     console.error("❌ ERREUR ODOO :", err.response?.data || err);
     return res.status(500).json({
