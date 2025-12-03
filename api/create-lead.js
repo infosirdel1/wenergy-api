@@ -178,7 +178,7 @@ ${simulation.payback_text}
           args: [
             {
               partner_id: partnerId,
-              note: "Devis généré automatiquement via simulateur Wenergy",
+              note: "« Les conditions générales de vente ont été acceptées au moment de l’action “Commander & accepter”. Les données présentées dans le simulateur reposent sur des projections d’évolution du prix de l’électricité — incluant notamment une hypothèse d’inflation annuelle de 5 % — ainsi que sur les caractéristiques techniques certifiées du matériel sélectionné. Ces informations ont pour seul objectif de fournir une estimation réaliste et cohérente, sans toutefois constituer une offre contractuelle au sens juridique du terme. »",
             },
           ],
           kwargs: {},
