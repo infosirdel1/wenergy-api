@@ -1,5 +1,8 @@
 import axios from "axios";
 
+// ⭐ ID du produit test dans Odoo
+const PRODUCT_ID_TEST = 9;
+
 export default async function handler(req, res) {
   // --- CORS ---
   res.setHeader("Access-Control-Allow-Origin", "*");
