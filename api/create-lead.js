@@ -33,9 +33,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // ID du produit TEST dans Odoo (⚠️ CHANGE-LE AVEC LE TIEN)
-    const PRODUCT_ID_TEST = 12;
-
     // ---------------------------------------------
     // 2) VARIABLES ODOO
     // ---------------------------------------------
