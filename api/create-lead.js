@@ -206,7 +206,7 @@ ${simulation.payback_text}
       console.log("🧪 MODE TEST ACTIVÉ → produit TEST 0,01 €");
 
       finalProduct = {
-        name: "TEST – 0,01 €",
+        name: "TEST – 0,5 €",
         odoo_product_id: PRODUCT_ID_TEST, // ⚠️ CHANGE L'ID ICI
         quantity: 1,
         unit_price: 0.01,
