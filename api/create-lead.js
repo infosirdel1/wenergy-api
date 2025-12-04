@@ -203,13 +203,13 @@ ${simulation.payback_text}
     let finalProduct = null;
 
     if (test === true) {
-      console.log("🧪 MODE TEST ACTIVÉ → produit TEST 0,01 €");
+      console.log("🧪 MODE TEST ACTIVÉ → produit TEST 0,5 €");
 
       finalProduct = {
         name: "TEST – 0,5 €",
         odoo_product_id: PRODUCT_ID_TEST, // ⚠️ CHANGE L'ID ICI
         quantity: 1,
-        unit_price: 0.01,
+        unit_price: 0.5,
       };
     } else {
       finalProduct = order_product;
