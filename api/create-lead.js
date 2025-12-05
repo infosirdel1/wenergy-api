@@ -183,7 +183,9 @@ ${simulation.payback_text}
           args: [
             {
               partner_id: partnerId,
-              note: "Conditions générales acceptées lors de la commande.",
+              note: "« Les Conditions Générales de Vente ont été lues et acceptées lors de l’utilisation du simulateur en ligne.
+Le résultat fourni par le simulateur est une estimation basée sur une production photovoltaïque moyenne de 5 % et ne constitue en aucun cas une offre contractuelle.
+Seules les informations reprises dans le devis signé et la facture font foi. »",
             },
           ],
           kwargs: {},
