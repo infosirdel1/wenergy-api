@@ -239,25 +239,30 @@ if (!quotationId) {
       { headers: { Cookie: cookieHeader } }
     );
 
-    // ---------------------------------------------
-    // 9) URL PORTAIL SIGNATURE
-    // ---------------------------------------------
-    const portalResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "sale.order",
-          method: "get_portal_url",
-          args: [quotationId],
-        },
-        id: Date.now(),
-      },
-      { headers: { Cookie: cookieHeader } }
-    );
+   // ---------------------------------------------
+// 9) URL PORTAIL SIGNATURE
+// ---------------------------------------------
+const portalResp = await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "sale.order",
+      method: "get_portal_url",
+      args: [quotationId],
+      kwargs: {}   // 🔥 obligatoire en Odoo 19
+    },
+    id: Date.now(),
+  },
+  { headers: { Cookie: cookieHeader } }
+);
 
-    const portal_url = portalResp.data.result;
+// 🔥 DEBUG LOGS POUR COMPRENDRE LE PROBLÈME
+console.log("DEBUG PORTALRESP ===>", JSON.stringify(portalResp.data, null, 2));
+console.log("DEBUG PORTAL_URL RAW ===>", portalResp.data.result);
+
+const portal_url = portalResp.data.result || null;
 
     // ---------------------------------------------
     // 10) RÉPONSE → SIMULATEUR
