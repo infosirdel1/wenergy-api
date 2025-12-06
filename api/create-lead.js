@@ -196,29 +196,59 @@ ${simulation.payback_text}
 
     const quotationId = quotationResp.data.result;
 
-    // ---------------------------------------------
-    // 7) PRODUIT FINAL : NORMAL OU TEST
-    // ---------------------------------------------
-    console.log("📦 Ajout produit… (mode test =", test, ")");
+   // ---------------------------------------------
+// 7) PRODUIT FINAL : NORMAL OU TEST
+// ---------------------------------------------
+console.log("📦 Ajout produit… (mode test =", test, ")");
 
-    let finalProduct = null;
+// --------------------------------------------------
+// 🆕 MAPPING SIMULATEUR → PRODUITS ODOO
+// --------------------------------------------------
+const PRODUCT_MAP = {
+  venus_c: {
+    odoo_product_id: 12,  // ➜ À REMPLIR avec ton ID réel
+    name: "Marstek Venus C – 2.56 kWh",
+  },
+  venus_e: {
+    odoo_product_id: 13,  // ➜ À REMPLIR avec ton ID réel
+    name: "Marstek Venus E Gen 3.0 – 5.12 kWh",
+  },
+};
 
-    if (test === true) {
-      console.log("🧪 MODE TEST ACTIVÉ → produit TEST 0,5 €");
+function getRealProductFromSimulator(code, qty, unitPrice) {
+  const prod = PRODUCT_MAP[code];
+  if (!prod) return null;
 
-      finalProduct = {
-        name: "TEST – 0,5 €",
-        odoo_product_id: PRODUCT_ID_TEST, // ⚠️ CHANGE L'ID ICI
-        quantity: 1,
-        unit_price: 0.5,
-      };
-    } else {
-      finalProduct = order_product;
-    }
+  return {
+    name: prod.name,
+    odoo_product_id: prod.odoo_product_id,
+    quantity: qty,
+    unit_price: unitPrice,
+  };
+}
 
-    if (!finalProduct || !finalProduct.odoo_product_id) {
-      throw new Error("Produit invalide (test ou réel)");
-    }
+let finalProduct = null;
+
+if (test === true) {
+  console.log("🧪 MODE TEST ACTIVÉ → produit TEST 0,5 €");
+
+  finalProduct = {
+    name: "TEST – 0,5 €",
+    odoo_product_id: PRODUCT_ID_TEST,
+    quantity: 1,
+    unit_price: 0.5,
+  };
+} else {
+  finalProduct = getRealProductFromSimulator(
+    simulation.battery_model_raw,
+    order_product.quantity,
+    order_product.unit_price
+  );
+}
+
+if (!finalProduct || !finalProduct.odoo_product_id) {
+  throw new Error("Produit invalide (test ou réel)");
+}
 
     // ---------------------------------------------
     // 8) AJOUT LIGNE DE VIS
