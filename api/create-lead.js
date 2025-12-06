@@ -155,119 +155,110 @@ ${simulation.payback_text}
     const partnerId = partnerResp.data.result;
     if (!partnerId) throw new Error("Partner non créé");
 
- // ---------------------------------------------
-// 6) CRÉATION DU DEVIS (FIX)
-// ---------------------------------------------
-const quotationResp = await axios.post(
-  `${ODOO_URL}/web/dataset/call_kw`,
-  {
-    jsonrpc: "2.0",
-    method: "call",
-    params: {
-      model: "sale.order",
-      method: "create",
-      args: [
-        {
-          partner_id: partnerId,
-          partner_invoice_id: partnerId,
-          partner_shipping_id: partnerId,
+    // ---------------------------------------------
+    // 6) CRÉATION DU DEVIS
+    // ---------------------------------------------
+    const quotationResp = await axios.post(
+      `${ODOO_URL}/web/dataset/call_kw`,
+      {
+        jsonrpc: "2.0",
+        method: "call",
+        params: {
+          model: "sale.order",
+          method: "create",
+          args: [
+            {
+              partner_id: partnerId,
+              partner_invoice_id: partnerId,
+              partner_shipping_id: partnerId,
 
-          pricelist_id: 1,
-          payment_term_id: false,
-          team_id: 1,
+              pricelist_id: 1,
+              payment_term_id: false,
+              team_id: 1,
 
-          note:
-            "Les CGV ont été acceptées dans le simulateur.\n" +
-            "Les résultats sont indicatifs et non contractuels.",
+             note:
+  "Les Conditions Générales de Vente ont été acceptées lors de la signature électronique du devis via le bouton prévu à cet effet.\n" +
+  "Toutes les données issues du simulateur sont fournies à titre indicatif et ne constituent en aucun cas une offre contractuelle.",
+            },
+          ],
+          kwargs: {}
         },
-      ],
-      kwargs: {}   // OBLIGATOIRE Odoo 19
-    },
-    id: Date.now(),
-  },
-  { headers: { Cookie: cookieHeader } }
-);
+        id: Date.now(),
+      },
+      { headers: { Cookie: cookieHeader } }
+    );
 
-// 🔥 IL FAUT ABSOLUMENT CETTE LIGNE AVANT LE IF !
-const quotationId = quotationResp.data.result;
-
-// 🔥 DEBUG
-if (!quotationId) {
-  console.log("❌ DEBUG ODOO — sale.order.create response:");
-  console.log(JSON.stringify(quotationResp.data, null, 2));
-  throw new Error("Devis non créé");
-}
-
-    // ---------------------------------------------
-    // 7) MODE TEST OU PRODUIT RÉEL
-    // ---------------------------------------------
-    let productId = order_product.odoo_product_id;
-    let productName = order_product.name;
-    let qty = order_product.quantity;
-    let unitPrice = order_product.unit_price;
-
-    if (test === true) {
-      productId = PRODUCT_ID_TEST;
-      productName = "TEST – 0,5 €";
-      qty = 1;
-      unitPrice = 0.5;
+    const quotationId = quotationResp.data.result;
+    if (!quotationId) {
+      console.log("❌ DEBUG ODOO — sale.order.create response:");
+      console.log(JSON.stringify(quotationResp.data, null, 2));
+      throw new Error("Devis non créé");
     }
 
-   // ---------------------------------------------
-// 8) AJOUT LIGNE DEVIS (FIX ODOO 19)
-// ---------------------------------------------
-const lineResp = await axios.post(
-  `${ODOO_URL}/web/dataset/call_kw`,
-  {
-    jsonrpc: "2.0",
-    method: "call",
-    params: {
-      model: "sale.order.line",
-      method: "create",
-      args: [
-        {
-          order_id: parseInt(quotationId, 10),
-          product_id: parseInt(productId, 10),
-          product_uom_qty: qty,
-          price_unit: unitPrice,
-          name: productName,
+    // ---------------------------------------------
+    // 7) MODE TEST OU PRODUIT RÉEL ★ MODIFIÉ ★
+    // ---------------------------------------------
+    let productId   = order_product.odoo_product_id;
+    let productName = order_product.name;
+    let qty         = order_product.quantity;
+    let unitPrice   = order_product.unit_price;   // ← prix déjà calculé dans simulateur
+
+    if (test === true) {
+      productId   = PRODUCT_ID_TEST;
+      productName = "TEST – 0,5 €";
+      qty         = 1;
+      unitPrice   = 0.5;
+    }
+
+    // ---------------------------------------------
+    // 8) AJOUT LIGNE DEVIS ★ MODIFIÉ ★
+    // ---------------------------------------------
+    const lineResp = await axios.post(
+      `${ODOO_URL}/web/dataset/call_kw`,
+      {
+        jsonrpc: "2.0",
+        method: "call",
+        params: {
+          model: "sale.order.line",
+          method: "create",
+          args: [
+            {
+              order_id: parseInt(quotationId, 10),
+              product_id: parseInt(productId, 10),
+              product_uom_qty: qty,
+              price_unit: unitPrice,
+              name: productName
+            },
+          ],
+          kwargs: {}
         },
-      ],
-      kwargs: {} // 🔥 obligatoire en Odoo 19 (comme pour le lead et le partner)
-    },
-    id: Date.now(),
-  },
-  { headers: { Cookie: cookieHeader } }
-);
+        id: Date.now(),
+      },
+      { headers: { Cookie: cookieHeader } }
+    );
 
-// Optionnel : petit debug pour vérifier
-console.log("DEBUG sale.order.line.create =>", JSON.stringify(lineResp.data, null, 2));
+    console.log("DEBUG sale.order.line.create =>", JSON.stringify(lineResp.data, null, 2));
 
+    // ---------------------------------------------
+    // 9) URL PORTAIL SIGNATURE
+    // ---------------------------------------------
+    const portalResp = await axios.post(
+      `${ODOO_URL}/web/dataset/call_kw`,
+      {
+        jsonrpc: "2.0",
+        method: "call",
+        params: {
+          model: "sale.order",
+          method: "get_portal_url",
+          args: [quotationId],
+          kwargs: {}
+        },
+        id: Date.now(),
+      },
+      { headers: { Cookie: cookieHeader } }
+    );
 
-   // ---------------------------------------------
-// 9) URL PORTAIL SIGNATURE
-// ---------------------------------------------
-const portalResp = await axios.post(
-  `${ODOO_URL}/web/dataset/call_kw`,
-  {
-    jsonrpc: "2.0",
-    method: "call",
-    params: {
-      model: "sale.order",
-      method: "get_portal_url",
-      args: [quotationId],
-      kwargs: {}   // 🔥 obligatoire en Odoo 19
-    },
-    id: Date.now(),
-  },
-  { headers: { Cookie: cookieHeader } }
-);
-
-// 🔥 DEBUG LOGS POUR COMPRENDRE LE PROBLÈME
-console.log("DEBUG PORTALRESP ===>", JSON.stringify(portalResp.data, null, 2));
-console.log("DEBUG PORTAL_URL RAW ===>", portalResp.data.result);
-
-const portal_url = portalResp.data.result || null;
+    const portal_url = portalResp.data.result || null;
 
     // ---------------------------------------------
     // 10) RÉPONSE → SIMULATEUR
