@@ -119,34 +119,39 @@ ${simulation.payback_text}
     const leadId = leadResp.data.result;
     if (!leadId) throw new Error("Lead non créé");
 
-   // 5) CRÉATION CLIENT
-const partnerResp = await axios.post(
-  `${ODOO_URL}/web/dataset/call_kw`,
-  {
-    jsonrpc: "2.0",
-    method: "call",
-    params: {
-      model: "res.partner",
-      method: "create",
-      args: [
-        {
-          name: client.company || `${client.firstname} ${client.lastname}`,
-          email: client.email,
-          phone: client.phone,
-          street: client.address,
-          zip: client.zip,
-          city: client.city,
-          type: "contact",
-          customer_rank: 1,
-          vat: client.vat || undefined,
+    // ---------------------------------------------
+    // 5) CRÉATION CLIENT (PARTNER)
+    // ---------------------------------------------
+    const partnerResp = await axios.post(
+      `${ODOO_URL}/web/dataset/call_kw`,
+      {
+        jsonrpc: "2.0",
+        method: "call",
+        params: {
+          model: "res.partner",
+          method: "create",
+          args: [
+            {
+              name: client.company || `${client.firstname} ${client.lastname}`,
+              email: client.email,
+              phone: client.phone,
+              street: client.address,
+              zip: client.zip,
+              city: client.city,
+              type: "contact",
+              customer_rank: 1,
+              vat: client.vat || undefined,
+            },
+          ],
+          kwargs: {},
         },
-      ],
-      kwargs: {},
-    },
-    id: Date.now(),
-  },
-  { headers: { Cookie: cookieHeader } }
-);
+        id: Date.now(),
+      },
+      { headers: { Cookie: cookieHeader } }
+    );
+
+    const partnerId = partnerResp.data.result;
+    if (!partnerId) throw new Error("Partner non créé");
 
     // ---------------------------------------------
     // 6) CRÉATION DU DEVIS
@@ -192,7 +197,7 @@ const partnerResp = await axios.post(
     }
 
     // ---------------------------------------------
-    // 8) AJOUT DE LA LIGNE DEVIS
+    // 8) AJOUT LIGNE DEVIS
     // ---------------------------------------------
     await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
@@ -245,8 +250,9 @@ const partnerResp = await axios.post(
       lead_id: leadId,
       partner_id: partnerId,
       quotation_id: quotationId,
-      portal_url, // ⭐ correspond EXACTEMENT au simulateur
+      portal_url,
     });
+
   } catch (err) {
     console.error("❌ ERREUR ODOO :", err.response?.data || err);
     return res.status(500).json({
