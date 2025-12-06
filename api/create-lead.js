@@ -119,39 +119,34 @@ ${simulation.payback_text}
     const leadId = leadResp.data.result;
     if (!leadId) throw new Error("Lead non créé");
 
-    // ---------------------------------------------
-    // 5) CRÉATION DU PARTENAIRE
-    // ---------------------------------------------
-    const partnerResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "res.partner",
-          method: "create",
-          args: [
-            {
-              name: client.company || `${client.firstname} ${client.lastname}`,
-              email: client.email,
-              phone: client.phone,
-              street: client.street,
-              street2: client.address,
-              zip: client.zip,
-              city: client.city,
-              country_id: client.country || undefined,
-              vat: client.vat || undefined,
-              customer_rank: 1,
-            },
-          ],
+   // 5) CRÉATION CLIENT
+const partnerResp = await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "res.partner",
+      method: "create",
+      args: [
+        {
+          name: client.company || `${client.firstname} ${client.lastname}`,
+          email: client.email,
+          phone: client.phone,
+          street: client.address,
+          zip: client.zip,
+          city: client.city,
+          type: "contact",
+          customer_rank: 1,
+          vat: client.vat || undefined,
         },
-        id: Date.now(),
-      },
-      { headers: { Cookie: cookieHeader } }
-    );
-
-    const partnerId = partnerResp.data.result;
-    if (!partnerId) throw new Error("Partner non créé");
+      ],
+      kwargs: {},
+    },
+    id: Date.now(),
+  },
+  { headers: { Cookie: cookieHeader } }
+);
 
     // ---------------------------------------------
     // 6) CRÉATION DU DEVIS
