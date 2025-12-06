@@ -22,14 +22,14 @@ export default async function handler(req, res) {
 
   try {
     // ---------------------------------------------
-    // 1) EXTRACTION DES DONNÉES + MODE TEST
+    // 1) DONNÉES REÇUES DU SIMULATEUR
     // ---------------------------------------------
     const { client, simulation, order_product, test } = req.body || {};
 
-    if (!client || !simulation) {
+    if (!client || !simulation || !order_product) {
       return res.status(400).json({
         status: "error",
-        message: "Missing client or simulation data",
+        message: "Missing client, simulation or product data",
       });
     }
 
@@ -48,8 +48,6 @@ export default async function handler(req, res) {
     // ---------------------------------------------
     // 3) AUTHENTIFICATION ODOO
     // ---------------------------------------------
-    console.log("🔐 Auth Odoo →", ODOO_URL, ODOO_DB, ODOO_USER);
-
     const authResp = await axios.post(
       `${ODOO_URL}/web/session/authenticate`,
       {
@@ -73,15 +71,13 @@ export default async function handler(req, res) {
       ?.split(";")[0]
       ?.replace("session_id=", "");
 
-    if (!session_id) throw new Error("Session ID not found in cookies");
+    if (!session_id) throw new Error("Session ID not found");
 
     const cookieHeader = `session_id=${session_id}`;
 
     // ---------------------------------------------
-    // 4) CRÉATION LEAD
+    // 4) CRÉATION DU LEAD
     // ---------------------------------------------
-    console.log("📝 Création du lead…");
-
     const leadResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -105,15 +101,7 @@ export default async function handler(req, res) {
               description: `
 TVA : ${client.vat || ""}
 
-Simulation Wenergy
-Consommation : ${simulation.consumption}
-Modèle : ${simulation.battery_model_name}
-Capacité totale : ${simulation.total_capacity} kWh
-Batteries : ${simulation.battery_count}
-PV : ${simulation.has_pv}
-Fournisseur : ${simulation.supplier}
-
-Résumé :
+Simulation :
 ${simulation.summary_html}
 
 Payback :
@@ -132,10 +120,8 @@ ${simulation.payback_text}
     if (!leadId) throw new Error("Lead non créé");
 
     // ---------------------------------------------
-    // 5) CRÉATION CLIENT
+    // 5) CRÉATION DU PARTENAIRE
     // ---------------------------------------------
-    console.log("👤 Création du client…");
-
     const partnerResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -149,15 +135,15 @@ ${simulation.payback_text}
               name: client.company || `${client.firstname} ${client.lastname}`,
               email: client.email,
               phone: client.phone,
-              street: client.address,
+              street: client.street,
+              street2: client.address,
               zip: client.zip,
               city: client.city,
-              type: "contact",
-              customer_rank: 1,
+              country_id: client.country || undefined,
               vat: client.vat || undefined,
+              customer_rank: 1,
             },
           ],
-          kwargs: {},
         },
         id: Date.now(),
       },
@@ -165,13 +151,11 @@ ${simulation.payback_text}
     );
 
     const partnerId = partnerResp.data.result;
-    if (!partnerId) throw new Error("Client non créé");
+    if (!partnerId) throw new Error("Partner non créé");
 
     // ---------------------------------------------
     // 6) CRÉATION DU DEVIS
     // ---------------------------------------------
-    console.log("📄 Création du devis…");
-
     const quotationResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -183,11 +167,11 @@ ${simulation.payback_text}
           args: [
             {
               partner_id: partnerId,
-              note: "« Les Conditions Générales de Vente ont été lues et acceptées lors de l’utilisation du simulateur en ligne.\nLe résultat fourni par le simulateur est une estimation basée sur une production photovoltaïque moyenne de 5 % et ne constitue en aucun cas une offre contractuelle.\nSeules les informations reprises dans le devis signé et la facture font foi. »",
-
+              note:
+                "Les CGV ont été acceptées dans le simulateur.\n" +
+                "Les résultats sont indicatifs et non contractuels.",
             },
           ],
-          kwargs: {},
         },
         id: Date.now(),
       },
@@ -195,65 +179,27 @@ ${simulation.payback_text}
     );
 
     const quotationId = quotationResp.data.result;
-
-   // ---------------------------------------------
-// 7) PRODUIT FINAL : NORMAL OU TEST
-// ---------------------------------------------
-console.log("📦 Ajout produit… (mode test =", test, ")");
-
-// --------------------------------------------------
-// 🆕 MAPPING SIMULATEUR → PRODUITS ODOO
-// --------------------------------------------------
-const PRODUCT_MAP = {
-  venus_c: {
-    odoo_product_id: 4,  // ⭐ ID réel Odoo
-    name: "Marstek Venus C – 2.56 kWh",
-  },
-  venus_e: {
-    odoo_product_id: 5,  // ⭐ ID réel Odoo
-    name: "Marstek Venus E Gen 3.0 – 5.12 kWh",
-  },
-};
-
-function getRealProductFromSimulator(code, qty, unitPrice) {
-  const prod = PRODUCT_MAP[code];
-  if (!prod) return null;
-
-  return {
-    name: prod.name,
-    odoo_product_id: prod.odoo_product_id,
-    quantity: qty,
-    unit_price: unitPrice,
-  };
-}
-
-let finalProduct = null;
-
-if (test === true) {
-  console.log("🧪 MODE TEST ACTIVÉ → produit TEST 0,5 €");
-
-  finalProduct = {
-    name: "TEST – 0,5 €",
-    odoo_product_id: PRODUCT_ID_TEST,
-    quantity: 1,
-    unit_price: 0.5,
-  };
-} else {
-  finalProduct = getRealProductFromSimulator(
-    simulation.battery_model_raw,
-    order_product.quantity,
-    order_product.unit_price
-  );
-}
-
-if (!finalProduct || !finalProduct.odoo_product_id) {
-  throw new Error("Produit invalide (test ou réel)");
-}
+    if (!quotationId) throw new Error("Devis non créé");
 
     // ---------------------------------------------
-    // 8) AJOUT LIGNE DE VIS
+    // 7) MODE TEST OU PRODUIT RÉEL
     // ---------------------------------------------
-    const lineResp = await axios.post(
+    let productId = order_product.odoo_product_id;
+    let productName = order_product.name;
+    let qty = order_product.quantity;
+    let unitPrice = order_product.unit_price;
+
+    if (test === true) {
+      productId = PRODUCT_ID_TEST;
+      productName = "TEST – 0,5 €";
+      qty = 1;
+      unitPrice = 0.5;
+    }
+
+    // ---------------------------------------------
+    // 8) AJOUT DE LA LIGNE DEVIS
+    // ---------------------------------------------
+    await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
         jsonrpc: "2.0",
@@ -264,23 +210,20 @@ if (!finalProduct || !finalProduct.odoo_product_id) {
           args: [
             {
               order_id: quotationId,
-              product_id: finalProduct.odoo_product_id,
-              product_uom_qty: finalProduct.quantity || 1,
-              price_unit: finalProduct.unit_price || 0,
-              name: finalProduct.name || "Produit",
+              product_id: productId,
+              product_uom_qty: qty,
+              price_unit: unitPrice,
+              name: productName,
             },
           ],
-          kwargs: {},
         },
         id: Date.now(),
       },
       { headers: { Cookie: cookieHeader } }
     );
 
-    if (!lineResp.data.result) throw new Error("Échec création ligne devis");
-
     // ---------------------------------------------
-    // 9) URL PORTAIL POUR SIGNATURE
+    // 9) URL PORTAIL SIGNATURE
     // ---------------------------------------------
     const portalResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
@@ -291,28 +234,24 @@ if (!finalProduct || !finalProduct.odoo_product_id) {
           model: "sale.order",
           method: "get_portal_url",
           args: [quotationId],
-          kwargs: {},
         },
         id: Date.now(),
       },
       { headers: { Cookie: cookieHeader } }
     );
 
-    const portalUrl = portalResp.data.result;
+    const portal_url = portalResp.data.result;
 
-  // ---------------------------------------------
-// 10) RÉPONSE CLIENT
-// ---------------------------------------------
-return res.status(200).json({
-  status: "success",
-  lead_id: leadId,
-  partner_id: partnerId,
-  quotation_id: quotationId,
-
-  // ⭐ OBLIGATOIRE pour que la signature s’ouvre dans le simulateur
-  url_sign: portalUrl,
-});
-
+    // ---------------------------------------------
+    // 10) RÉPONSE → SIMULATEUR
+    // ---------------------------------------------
+    return res.status(200).json({
+      status: "success",
+      lead_id: leadId,
+      partner_id: partnerId,
+      quotation_id: quotationId,
+      portal_url, // ⭐ correspond EXACTEMENT au simulateur
+    });
   } catch (err) {
     console.error("❌ ERREUR ODOO :", err.response?.data || err);
     return res.status(500).json({
@@ -321,4 +260,3 @@ return res.status(200).json({
     });
   }
 }
-
