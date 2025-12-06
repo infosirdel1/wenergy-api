@@ -300,7 +300,7 @@ if (!finalProduct || !finalProduct.odoo_product_id) {
 
     const portalUrl = portalResp.data.result;
 
-    // ---------------------------------------------
+  // ---------------------------------------------
 // 10) RÉPONSE CLIENT
 // ---------------------------------------------
 return res.status(200).json({
@@ -308,8 +308,17 @@ return res.status(200).json({
   lead_id: leadId,
   partner_id: partnerId,
   quotation_id: quotationId,
-  
+
   // ⭐ OBLIGATOIRE pour que la signature s’ouvre dans le simulateur
   url_sign: portalUrl,
 });
+
+  } catch (err) {
+    console.error("❌ ERREUR ODOO :", err.response?.data || err);
+    return res.status(500).json({
+      status: "error",
+      detail: err.response?.data || err.toString(),
+    });
+  }
+}
 
