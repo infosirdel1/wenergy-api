@@ -171,21 +171,32 @@ const quotationResp = await axios.post(
           partner_id: partnerId,
           partner_invoice_id: partnerId,
           partner_shipping_id: partnerId,
+
           pricelist_id: 1,
           payment_term_id: false,
           team_id: 1,
+
           note:
             "Les CGV ont été acceptées dans le simulateur.\n" +
             "Les résultats sont indicatifs et non contractuels.",
         },
       ],
-      kwargs: {}   // 🔥 OBLIGATOIRE POUR ODOO 19
+      kwargs: {}   // OBLIGATOIRE Odoo 19
     },
     id: Date.now(),
   },
   { headers: { Cookie: cookieHeader } }
 );
 
+// 🔥 IL FAUT ABSOLUMENT CETTE LIGNE AVANT LE IF !
+const quotationId = quotationResp.data.result;
+
+// 🔥 DEBUG
+if (!quotationId) {
+  console.log("❌ DEBUG ODOO — sale.order.create response:");
+  console.log(JSON.stringify(quotationResp.data, null, 2));
+  throw new Error("Devis non créé");
+}
 
     // ---------------------------------------------
     // 7) MODE TEST OU PRODUIT RÉEL
