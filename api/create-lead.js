@@ -213,31 +213,36 @@ if (!quotationId) {
       unitPrice = 0.5;
     }
 
-    // ---------------------------------------------
-    // 8) AJOUT LIGNE DEVIS
-    // ---------------------------------------------
-    await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "sale.order.line",
-          method: "create",
-          args: [
-            {
-              order_id: quotationId,
-              product_id: productId,
-              product_uom_qty: qty,
-              price_unit: unitPrice,
-              name: productName,
-            },
-          ],
+   // ---------------------------------------------
+// 8) AJOUT LIGNE DEVIS (FIX ODOO 19)
+// ---------------------------------------------
+const lineResp = await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "sale.order.line",
+      method: "create",
+      args: [
+        {
+          order_id: parseInt(quotationId, 10),
+          product_id: parseInt(productId, 10),
+          product_uom_qty: qty,
+          price_unit: unitPrice,
+          name: productName,
         },
-        id: Date.now(),
-      },
-      { headers: { Cookie: cookieHeader } }
-    );
+      ],
+      kwargs: {} // 🔥 obligatoire en Odoo 19 (comme pour le lead et le partner)
+    },
+    id: Date.now(),
+  },
+  { headers: { Cookie: cookieHeader } }
+);
+
+// Optionnel : petit debug pour vérifier
+console.log("DEBUG sale.order.line.create =>", JSON.stringify(lineResp.data, null, 2));
+
 
    // ---------------------------------------------
 // 9) URL PORTAIL SIGNATURE
