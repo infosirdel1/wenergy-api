@@ -1,5 +1,7 @@
 import axios from "axios";
 
+console.log("🔥 create-lead.js chargé");
+
 // ⭐ ID du produit test dans Odoo
 const PRODUCT_ID_TEST = 9;
 
