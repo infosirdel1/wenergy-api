@@ -187,8 +187,10 @@ const quotationResp = await axios.post(
 );
 
 const quotationId = quotationResp.data.result;
-if (!quotationId) throw new Error("Devis non créé");
-
+if (!quotationId) {
+  console.log("❌ Odoo sale.order error :", quotationResp.data);
+  throw new Error("Devis non créé");
+}
 
     // ---------------------------------------------
     // 7) MODE TEST OU PRODUIT RÉEL
