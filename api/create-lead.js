@@ -155,7 +155,7 @@ ${simulation.payback_text}
     const partnerId = partnerResp.data.result;
     if (!partnerId) throw new Error("Partner non créé");
 
-  // ---------------------------------------------
+ // ---------------------------------------------
 // 6) CRÉATION DU DEVIS (FIX)
 // ---------------------------------------------
 const quotationResp = await axios.post(
@@ -171,30 +171,21 @@ const quotationResp = await axios.post(
           partner_id: partnerId,
           partner_invoice_id: partnerId,
           partner_shipping_id: partnerId,
-
           pricelist_id: 1,
           payment_term_id: false,
           team_id: 1,
-
           note:
             "Les CGV ont été acceptées dans le simulateur.\n" +
             "Les résultats sont indicatifs et non contractuels.",
         },
       ],
+      kwargs: {}   // 🔥 OBLIGATOIRE POUR ODOO 19
     },
     id: Date.now(),
   },
   { headers: { Cookie: cookieHeader } }
 );
 
-const quotationId = quotationResp.data.result;
-
-// 🔥 DIAGNOSTIC OBLIGATOIRE
-if (!quotationId) {
-  console.log("❌ DEBUG ODOO — sale.order.create response:");
-  console.log(JSON.stringify(quotationResp.data, null, 2));  // << LE PLUS IMPORTANT
-  throw new Error("Devis non créé");
-}
 
     // ---------------------------------------------
     // 7) MODE TEST OU PRODUIT RÉEL
