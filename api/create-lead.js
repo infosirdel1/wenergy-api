@@ -206,11 +206,11 @@ console.log("📦 Ajout produit… (mode test =", test, ")");
 // --------------------------------------------------
 const PRODUCT_MAP = {
   venus_c: {
-    odoo_product_id: 12,  // ➜ À REMPLIR avec ton ID réel
+    odoo_product_id: 4,  // ⭐ ID réel Odoo
     name: "Marstek Venus C – 2.56 kWh",
   },
   venus_e: {
-    odoo_product_id: 13,  // ➜ À REMPLIR avec ton ID réel
+    odoo_product_id: 5,  // ⭐ ID réel Odoo
     name: "Marstek Venus E Gen 3.0 – 5.12 kWh",
   },
 };
