@@ -153,33 +153,42 @@ ${simulation.payback_text}
     const partnerId = partnerResp.data.result;
     if (!partnerId) throw new Error("Partner non créé");
 
-    // ---------------------------------------------
-    // 6) CRÉATION DU DEVIS
-    // ---------------------------------------------
-    const quotationResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "sale.order",
-          method: "create",
-          args: [
-            {
-              partner_id: partnerId,
-              note:
-                "Les CGV ont été acceptées dans le simulateur.\n" +
-                "Les résultats sont indicatifs et non contractuels.",
-            },
-          ],
-        },
-        id: Date.now(),
-      },
-      { headers: { Cookie: cookieHeader } }
-    );
+   // ---------------------------------------------
+// 6) CRÉATION DU DEVIS (FIX)
+// ---------------------------------------------
+const quotationResp = await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "sale.order",
+      method: "create",
+      args: [
+        {
+          partner_id: partnerId,
+          partner_invoice_id: partnerId,
+          partner_shipping_id: partnerId,
 
-    const quotationId = quotationResp.data.result;
-    if (!quotationId) throw new Error("Devis non créé");
+          // 🔥 Ajout des champs obligatoires pour éviter “Devis non créé”
+          pricelist_id: 1,        // ← Mets l’ID réel de ta liste de prix publique
+          payment_term_id: false, // ← ou un ID réel si obligatoire
+          team_id: 1,             // ← “Sales” par défaut dans Odoo
+
+          note:
+            "Les CGV ont été acceptées dans le simulateur.\n" +
+            "Les résultats sont indicatifs et non contractuels.",
+        },
+      ],
+    },
+    id: Date.now(),
+  },
+  { headers: { Cookie: cookieHeader } }
+);
+
+const quotationId = quotationResp.data.result;
+if (!quotationId) throw new Error("Devis non créé");
+
 
     // ---------------------------------------------
     // 7) MODE TEST OU PRODUIT RÉEL
