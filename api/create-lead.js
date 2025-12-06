@@ -153,7 +153,7 @@ ${simulation.payback_text}
     const partnerId = partnerResp.data.result;
     if (!partnerId) throw new Error("Partner non créé");
 
-   // ---------------------------------------------
+  // ---------------------------------------------
 // 6) CRÉATION DU DEVIS (FIX)
 // ---------------------------------------------
 const quotationResp = await axios.post(
@@ -170,10 +170,9 @@ const quotationResp = await axios.post(
           partner_invoice_id: partnerId,
           partner_shipping_id: partnerId,
 
-          // 🔥 Ajout des champs obligatoires pour éviter “Devis non créé”
-          pricelist_id: 1,        // ← Mets l’ID réel de ta liste de prix publique
-          payment_term_id: false, // ← ou un ID réel si obligatoire
-          team_id: 1,             // ← “Sales” par défaut dans Odoo
+          pricelist_id: 1,
+          payment_term_id: false,
+          team_id: 1,
 
           note:
             "Les CGV ont été acceptées dans le simulateur.\n" +
@@ -187,8 +186,11 @@ const quotationResp = await axios.post(
 );
 
 const quotationId = quotationResp.data.result;
+
+// 🔥 DIAGNOSTIC OBLIGATOIRE
 if (!quotationId) {
-  console.log("❌ Odoo sale.order error :", quotationResp.data);
+  console.log("❌ DEBUG ODOO — sale.order.create response:");
+  console.log(JSON.stringify(quotationResp.data, null, 2));  // << LE PLUS IMPORTANT
   throw new Error("Devis non créé");
 }
 
