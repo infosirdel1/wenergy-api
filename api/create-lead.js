@@ -23,9 +23,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // ---------------------------------------------
-    // 1) DONNÉES REÇUES DU SIMULATEUR
-    // ---------------------------------------------
+    // 1) DONNÉES REÇUES
     const { client, simulation, order_product, test } = req.body || {};
 
     if (!client || !simulation || !order_product) {
@@ -35,9 +33,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // ---------------------------------------------
-    // 2) VARIABLES ODOO
-    // ---------------------------------------------
+    // 2) VARIABLES ENV
     const ODOO_URL      = process.env.ODOO_URL;
     const ODOO_DB       = process.env.ODOO_DB;
     const ODOO_USER     = process.env.ODOO_USER;
@@ -47,9 +43,7 @@ export default async function handler(req, res) {
       throw new Error("Missing Odoo env variables");
     }
 
-    // ---------------------------------------------
-    // 3) AUTHENTIFICATION ODOO
-    // ---------------------------------------------
+    // 3) LOGIN ODOO
     const authResp = await axios.post(
       `${ODOO_URL}/web/session/authenticate`,
       {
@@ -77,9 +71,7 @@ export default async function handler(req, res) {
 
     const cookieHeader = `session_id=${session_id}`;
 
-    // ---------------------------------------------
-    // 4) CRÉATION DU LEAD
-    // ---------------------------------------------
+    // 4) CRÉATION LEAD
     const leadResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -121,9 +113,7 @@ ${simulation.payback_text}
     const leadId = leadResp.data.result;
     if (!leadId) throw new Error("Lead non créé");
 
-    // ---------------------------------------------
-    // 5) CRÉATION CLIENT (PARTNER)
-    // ---------------------------------------------
+    // 5) PARTNER
     const partnerResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -155,9 +145,7 @@ ${simulation.payback_text}
     const partnerId = partnerResp.data.result;
     if (!partnerId) throw new Error("Partner non créé");
 
-    // ---------------------------------------------
-    // 6) CRÉATION DU DEVIS
-    // ---------------------------------------------
+    // 6) DEVIS (sale.order)
     const quotationResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -171,14 +159,12 @@ ${simulation.payback_text}
               partner_id: partnerId,
               partner_invoice_id: partnerId,
               partner_shipping_id: partnerId,
-
               pricelist_id: 1,
-              payment_term_id: false,
               team_id: 1,
 
-             note:
-  "Les Conditions Générales de Vente ont été acceptées lors de la signature électronique du devis via le bouton prévu à cet effet.\n" +
-  "Toutes les données issues du simulateur sont fournies à titre indicatif et ne constituent en aucun cas une offre contractuelle.",
+              note:
+"Les Conditions Générales de Vente ont été acceptées lors de la signature électronique du devis.\n" +
+"Toutes les données issues du simulateur sont fournies à titre indicatif.",
             },
           ],
           kwargs: {}
@@ -189,19 +175,13 @@ ${simulation.payback_text}
     );
 
     const quotationId = quotationResp.data.result;
-    if (!quotationId) {
-      console.log("❌ DEBUG ODOO — sale.order.create response:");
-      console.log(JSON.stringify(quotationResp.data, null, 2));
-      throw new Error("Devis non créé");
-    }
+    if (!quotationId) throw new Error("Devis non créé");
 
-    // ---------------------------------------------
-    // 7) MODE TEST OU PRODUIT RÉEL ★ MODIFIÉ ★
-    // ---------------------------------------------
+    // 7) PRODUIT / MODE TEST
     let productId   = order_product.odoo_product_id;
     let productName = order_product.name;
     let qty         = order_product.quantity;
-    let unitPrice   = order_product.unit_price;   // ← prix déjà calculé dans simulateur
+    let unitPrice   = order_product.unit_price;
 
     if (test === true) {
       productId   = PRODUCT_ID_TEST;
@@ -210,10 +190,8 @@ ${simulation.payback_text}
       unitPrice   = 0.5;
     }
 
-    // ---------------------------------------------
-    // 8) AJOUT LIGNE DEVIS ★ MODIFIÉ ★
-    // ---------------------------------------------
-    const lineResp = await axios.post(
+    // 8) AJOUT LIGNE
+    await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
         jsonrpc: "2.0",
@@ -237,11 +215,25 @@ ${simulation.payback_text}
       { headers: { Cookie: cookieHeader } }
     );
 
-    console.log("DEBUG sale.order.line.create =>", JSON.stringify(lineResp.data, null, 2));
+    // 🔥🔥🔥 9) ÉTAPE CRITIQUE : MARQUER LE DEVIS "Envoyé au client"
+    // Nécessaire pour que Odoo génère le token portail
+    await axios.post(
+      `${ODOO_URL}/web/dataset/call_kw`,
+      {
+        jsonrpc: "2.0",
+        method: "call",
+        params: {
+          model: "sale.order",
+          method: "action_quotation_sent",
+          args: [[quotationId]],
+          kwargs: {}
+        },
+        id: Date.now(),
+      },
+      { headers: { Cookie: cookieHeader } }
+    );
 
-    // ---------------------------------------------
-    // 9) URL PORTAIL SIGNATURE
-    // ---------------------------------------------
+    // 🔥🔥🔥 10) RÉCUPÉRATION DE L’URL PORTAIL APRÈS NOTIFICATION
     const portalResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -260,9 +252,8 @@ ${simulation.payback_text}
 
     const portal_url = portalResp.data.result || null;
 
-    // ---------------------------------------------
-    // 10) RÉPONSE → SIMULATEUR
-    // ---------------------------------------------
+    console.log("🔥 PORTAL URL =", portal_url);
+
     return res.status(200).json({
       status: "success",
       lead_id: leadId,
