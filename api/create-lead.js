@@ -1,4 +1,4 @@
-Code Create.lead 06/12 17h11
+ode Create.lead 06/12 17h11
 Ok avec catégories batteries
 
 import axios from "axios";
@@ -291,3 +291,4 @@ const portal_url = portalResp.data.result || null;
     });
   }
 }
+
