@@ -1,6 +1,3 @@
-ode Create.lead 06/12 17h11
-Ok avec catégories batteries
-
 import axios from "axios";
 
 console.log("🔥 create-lead.js chargé");
