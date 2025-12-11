@@ -267,7 +267,8 @@ const portalResp = await axios.post(
 console.log("DEBUG PORTALRESP ===>", JSON.stringify(portalResp.data, null, 2));
 console.log("DEBUG PORTAL_URL RAW ===>", portalResp.data.result);
 
-const portal_url = portalResp.data.result || null;
+const raw = portalResp.data.result;
+const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 
     // ---------------------------------------------
     // 10) RÉPONSE → SIMULATEUR
