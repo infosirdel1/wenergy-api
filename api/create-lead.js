@@ -107,9 +107,6 @@ TVA : ${client.vat || ""}
 Simulation :
 ${simulation.summary_html}
 
-Payback :
-${simulation.payback_text}
-
 Préférence de livraison : 
 ${client.delivery_pref || ""}
               `,
