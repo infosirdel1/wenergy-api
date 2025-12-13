@@ -27,6 +27,7 @@ export default async function handler(req, res) {
     // 1) DONNÉES REÇUES DU SIMULATEUR
     // ---------------------------------------------
     const { client, simulation, order_product, test } = req.body || {};
+    console.log("DEBUG delivery_pref (backend) =>", client?.delivery_pref);
 
     if (!client || !simulation || !order_product) {
       return res.status(400).json({
