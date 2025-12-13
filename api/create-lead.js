@@ -104,11 +104,14 @@ export default async function handler(req, res) {
               description: `
 TVA : ${client.vat || ""}
 
+Préférence de livraison :
+${client.delivery_pref || ""}
+
 Simulation :
 ${simulation.summary_html}
 
-Préférence de livraison : 
-${client.delivery_pref || ""}
+Payback :
+${simulation.payback_text}
               `,
             },
           ],
