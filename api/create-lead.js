@@ -100,12 +100,10 @@ export default async function handler(req, res) {
               city: client.city,
               type: "opportunity",
               partner_name: client.company || undefined,
+              x_delivery_preference: client.delivery_pref || "",
 
               description: `
 TVA : ${client.vat || ""}
-
-Préférence de livraison :
-${client.delivery_pref || ""}
 
 Simulation :
 ${simulation.summary_html}
