@@ -100,7 +100,7 @@ export default async function handler(req, res) {
               city: client.city,
               type: "opportunity",
               partner_name: client.company || undefined,
-              x_delivery_preference: client.delivery_pref || "",
+              x_studio_preference_de_livraison: client.delivery_pref || "",
 
               description: `
 TVA : ${client.vat || ""}
