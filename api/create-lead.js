@@ -178,7 +178,7 @@ const quotationResp = await axios.post(
           payment_term_id: false,
           team_id: 1,
           
-          x_delivery_preference: client.delivery_pref || "",
+          x_studio_preference_de_livraison || "",
 
           note:
             "Le client reconnaît avoir lu, compris et accepté l’intégralité des Conditions Générales de Vente applicables. Les informations, estimations, projections et résultats fournis par le simulateur sont strictement indicatifs. Ils ne constituent ni une offre commerciale, ni une proposition contractuelle, ni un engagement, ni une garantie de résultat ou de performance. Les données produites par le simulateur reposent exclusivement sur les informations disponibles au moment du calcul et ne sauraient engager la responsabilité de Wenergy. Aucune relation contractuelle n’est créée, modifiée ou interprétée à partir du simulateur : seule l’acquisition effective d’un produit ou service Wenergy constitue un engagement contractuel entre les parties.",
