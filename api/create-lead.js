@@ -2,8 +2,6 @@ import axios from "axios";
 
 console.log("🔥 create-lead.js chargé");
 
-console.log("DEBUG order_products (backend) =>", order_products);
-
 // ⭐ ID du produit test dans Odoo
 const PRODUCT_ID_TEST = 9;
 
@@ -28,6 +26,10 @@ export default async function handler(req, res) {
     // ---------------------------------------------
     // 1) DONNÉES REÇUES DU SIMULATEUR
     // ---------------------------------------------
+
+    
+    console.log("DEBUG order_products (backend) =>", order_products);
+    
     const { client, simulation, order_product, test } = req.body || {};
     console.log("DEBUG delivery_pref (backend) =>", client?.delivery_pref);
 
