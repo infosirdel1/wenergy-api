@@ -219,9 +219,10 @@ const productsToCreate = test === true
 for (const item of productsToCreate) {
 
 
-  const productId = parseInt(item.odoo_product_id, 10);
-  const qty       = parseFloat(item.quantity);
-  const unitPrice = parseFloat(item.unit_price_ht);
+const productId = Number(line.odoo_product_id);
+const qty       = Number(line.quantity);
+const unitPrice = Number(line.unit_price_ht);
+
 
  if (
   !Number.isFinite(productId) ||
