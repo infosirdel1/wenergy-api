@@ -24,21 +24,25 @@ export default async function handler(req, res) {
 
   try {
     // ---------------------------------------------
-    // 1) DONNÉES REÇUES DU SIMULATEUR
-    // ---------------------------------------------
+// 1) DONNÉES REÇUES DU SIMULATEUR
+// ---------------------------------------------
+const body = req.body || {};
 
-    
-    console.log("DEBUG order_products (backend) =>", order_products);
-    
-    const { client, simulation, order_product, test } = req.body || {};
-    console.log("DEBUG delivery_pref (backend) =>", client?.delivery_pref);
+const client         = body.client;
+const simulation     = body.simulation;
+const order_products = body.order_products;
+const test           = body.test;
 
-    if (!client || !simulation || !order_product) {
-      return res.status(400).json({
-        status: "error",
-        message: "Missing client, simulation or product data",
-      });
-    }
+console.log("DEBUG delivery_pref (backend) =>", client?.delivery_pref);
+console.log("DEBUG order_products (backend) =>", order_products);
+
+if (!client || !simulation || !Array.isArray(order_products)) {
+  return res.status(400).json({
+    status: "error",
+    message: "Missing client, simulation or order_products",
+  });
+}
+
 
     // ---------------------------------------------
     // 2) VARIABLES ODOO
@@ -205,47 +209,58 @@ if (!quotationId) {
   throw new Error("Devis non créé");
 }
 
-    // ---------------------------------------------
-    // 7) MODE TEST OU PRODUIT RÉEL
-    // ---------------------------------------------
-    let productId = order_product.odoo_product_id;
-    let productName = order_product.name;
-    let qty = order_product.quantity;
-    let unitPrice = order_product.unit_price;
-
-    if (test === true) {
-      productId = PRODUCT_ID_TEST;
-      productName = "TEST – 0,5 €";
-      qty = 1;
-      unitPrice = 0.5;
-    }
-
-   // ---------------------------------------------
-// 8) AJOUT LIGNE DEVIS (FIX ODOO 19)
+  // ---------------------------------------------
+// 7) MODE TEST OU PRODUIT RÉEL
 // ---------------------------------------------
-const lineResp = await axios.post(
-  `${ODOO_URL}/web/dataset/call_kw`,
-  {
-    jsonrpc: "2.0",
-    method: "call",
-    params: {
-      model: "sale.order.line",
-      method: "create",
-      args: [
-        {
-          order_id: parseInt(quotationId, 10),
-          product_id: parseInt(productId, 10),
-          product_uom_qty: qty,
-          price_unit: unitPrice,
-          name: productName,
-        },
-      ],
-      kwargs: {} // 🔥 obligatoire en Odoo 19 (comme pour le lead et le partner)
+let productId = order_product.odoo_product_id;
+let productName = order_product.name;
+let qty = order_product.quantity;
+let unitPrice = order_product.unit_price;
+
+if (test === true) {
+  productId = PRODUCT_ID_TEST;
+  productName = "TEST – 0,5 €";
+  qty = 1;
+  unitPrice = 0.5;
+}
+
+
+    // ---------------------------------------------
+// 8) AJOUT DES LIGNES DE DEVIS (HT)
+// ---------------------------------------------
+for (const item of order_products) {
+
+  const productId = parseInt(item.odoo_product_id, 10);
+  const qty       = parseFloat(item.quantity);
+  const unitPrice = parseFloat(item.unit_price_ht);
+
+  if (!productId || !qty || !unitPrice) {
+    throw new Error("Invalid order_products line");
+  }
+
+  await axios.post(
+    `${ODOO_URL}/web/dataset/call_kw`,
+    {
+      jsonrpc: "2.0",
+      method: "call",
+      params: {
+        model: "sale.order.line",
+        method: "create",
+        args: [
+          {
+            order_id: quotationId,
+            product_id: productId,
+            product_uom_qty: qty,
+            price_unit: unitPrice,
+          },
+        ],
+        kwargs: {}
+      },
+      id: Date.now(),
     },
-    id: Date.now(),
-  },
-  { headers: { Cookie: cookieHeader } }
-);
+    { headers: { Cookie: cookieHeader } }
+  );
+}
 
 // Optionnel : petit debug pour vérifier
 console.log("DEBUG sale.order.line.create =>", JSON.stringify(lineResp.data, null, 2));
@@ -271,7 +286,6 @@ const portalResp = await axios.post(
 );
 
 // 🔥 DEBUG LOGS POUR COMPRENDRE LE PROBLÈME
-console.log("DEBUG PORTALRESP ===>", JSON.stringify(portalResp.data, null, 2));
 console.log("DEBUG PORTAL_URL RAW ===>", portalResp.data.result);
 
 const raw = portalResp.data.result;
