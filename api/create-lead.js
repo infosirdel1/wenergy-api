@@ -209,7 +209,7 @@ if (!quotationId) {
   throw new Error("Devis non créé");
 }
 
-    // ---------------------------------------------
+   // ---------------------------------------------
 // 8) AJOUT DES LIGNES DE DEVIS (HT)
 // ---------------------------------------------
 const productsToCreate = test === true
@@ -218,21 +218,20 @@ const productsToCreate = test === true
 
 for (const item of productsToCreate) {
 
+  const productId = Number(item.odoo_product_id);
+  const qty       = Number(item.quantity);
+  const unitPrice = Number(item.unit_price_ht);
 
-const productId = Number(line.odoo_product_id);
-const qty       = Number(line.quantity);
-const unitPrice = Number(line.unit_price_ht);
-
-
- if (
-  !Number.isFinite(productId) ||
-  !Number.isFinite(qty) ||
-  qty <= 0 ||
-  !Number.isFinite(unitPrice) ||
-  unitPrice < 0
-) {
-  throw new Error("Invalid order_products line");
-}
+  if (
+    !Number.isFinite(productId) ||
+    !Number.isFinite(qty) ||
+    qty <= 0 ||
+    !Number.isFinite(unitPrice) ||
+    unitPrice < 0
+  ) {
+    console.error("INVALID ORDER LINE:", item);
+    throw new Error("Invalid order_products line");
+  }
 
   await axios.post(
     `${ODOO_URL}/web/dataset/call_kw`,
@@ -257,7 +256,6 @@ const unitPrice = Number(line.unit_price_ht);
     { headers: { Cookie: cookieHeader } }
   );
 }
-
 
    // ---------------------------------------------
 // 9) URL PORTAIL SIGNATURE
