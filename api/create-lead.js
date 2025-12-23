@@ -209,26 +209,15 @@ if (!quotationId) {
   throw new Error("Devis non créé");
 }
 
-  // ---------------------------------------------
-// 7) MODE TEST OU PRODUIT RÉEL
-// ---------------------------------------------
-let productId = order_product.odoo_product_id;
-let productName = order_product.name;
-let qty = order_product.quantity;
-let unitPrice = order_product.unit_price;
-
-if (test === true) {
-  productId = PRODUCT_ID_TEST;
-  productName = "TEST – 0,5 €";
-  qty = 1;
-  unitPrice = 0.5;
-}
-
-
     // ---------------------------------------------
 // 8) AJOUT DES LIGNES DE DEVIS (HT)
 // ---------------------------------------------
-for (const item of order_products) {
+const productsToCreate = test === true
+  ? [{ odoo_product_id: PRODUCT_ID_TEST, quantity: 1, unit_price_ht: 0.5 }]
+  : order_products;
+
+for (const item of productsToCreate) {
+
 
   const productId = parseInt(item.odoo_product_id, 10);
   const qty       = parseFloat(item.quantity);
@@ -261,9 +250,6 @@ for (const item of order_products) {
     { headers: { Cookie: cookieHeader } }
   );
 }
-
-// Optionnel : petit debug pour vérifier
-console.log("DEBUG sale.order.line.create =>", JSON.stringify(lineResp.data, null, 2));
 
 
    // ---------------------------------------------
