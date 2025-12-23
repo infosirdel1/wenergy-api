@@ -223,9 +223,15 @@ for (const item of productsToCreate) {
   const qty       = parseFloat(item.quantity);
   const unitPrice = parseFloat(item.unit_price_ht);
 
-  if (!productId || !qty || !unitPrice) {
-    throw new Error("Invalid order_products line");
-  }
+ if (
+  !Number.isFinite(productId) ||
+  !Number.isFinite(qty) ||
+  qty <= 0 ||
+  !Number.isFinite(unitPrice) ||
+  unitPrice < 0
+) {
+  throw new Error("Invalid order_products line");
+}
 
   await axios.post(
     `${ODOO_URL}/web/dataset/call_kw`,
