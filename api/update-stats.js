@@ -177,8 +177,7 @@ if (abandon_step !== undefined) {
       const prev = Number(record?.x_studio_clicked_order_count || 0);
       values.x_studio_clicked_order_count = prev + 1;
     }
-
-    // 🔥 CONSOMMATION (AJOUT UNIQUE)
+    
    if (req.body.hasOwnProperty("x_studio_consumption_input")) {
   values.x_studio_consumption_input = x_studio_consumption_input;
 }
@@ -193,7 +192,6 @@ if (
 ) {
   values.x_studio_lang = req.body.x_studio_lang;
 }
-
 
     const ALLOWED_COUNTRIES = ["be", "fr"];
 
@@ -213,6 +211,14 @@ if (
   values.x_studio_device = req.body.x_studio_device;
 }
 
+const ALLOWED_SOURCES = ["ads", "direct", "organic", "referral", "unknown"];
+
+if (
+  req.body.hasOwnProperty("x_studio_source") &&
+  ALLOWED_SOURCES.includes(req.body.x_studio_source)
+) {
+  values.x_studio_source = req.body.x_studio_source;
+}
 
     const prevLog = (record?.x_studio_event_log || "").toString();
     const line =
