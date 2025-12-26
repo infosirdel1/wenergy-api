@@ -192,6 +192,15 @@ if (
   values.x_studio_lang = x_studio_lang;
 }
 
+    const ALLOWED_COUNTRIES = ["be", "fr"];
+
+if (
+  req.body.hasOwnProperty("x_studio_country") &&
+  ALLOWED_COUNTRIES.includes(x_studio_country)
+) {
+  values.x_studio_country = x_studio_country;
+}
+
     const prevLog = (record?.x_studio_event_log || "").toString();
     const line =
       `[${new Date().toISOString()}] ` +
