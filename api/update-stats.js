@@ -1,5 +1,3 @@
-console.log("🟢 update-stats called", req.body);
-
 
 import axios from "axios";
 
@@ -23,6 +21,9 @@ export default async function handler(req, res) {
   }
 
   try {
+
+    console.log("🟢 update-stats called", req.body);
+
     // -----------------------------
     // INPUT
     // -----------------------------
