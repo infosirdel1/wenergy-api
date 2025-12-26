@@ -31,7 +31,8 @@ export default async function handler(req, res) {
       abandon_step,
       completed,
       increment_clicked_order,
-      x_studio_consumption_input   // ← AJOUT
+      x_studio_consumption_input,
+      x_studio_lang
     } = req.body || {};
 
     if (!session_id) {
@@ -182,6 +183,14 @@ if (abandon_step !== undefined) {
 values.x_studio_event_datetime =
   new Date().toISOString().replace("T", " ").substring(0, 19);
 
+const ALLOWED_LANGS = ["fr", "nl", "en"];
+
+if (
+  req.body.hasOwnProperty("x_studio_lang") &&
+  ALLOWED_LANGS.includes(x_studio_lang)
+) {
+  values.x_studio_lang = x_studio_lang;
+}
 
     const prevLog = (record?.x_studio_event_log || "").toString();
     const line =
