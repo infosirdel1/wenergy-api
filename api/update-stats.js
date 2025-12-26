@@ -22,6 +22,9 @@ export default async function handler(req, res) {
        S.2 – INPUT (API contract stable)
        ============================================================ */
 
+    console.log("🧪 RAW BODY =", JSON.stringify(req.body));
+    console.log("🧪 BODY KEYS =", Object.keys(req.body || {}));
+    
     const {
       session_id,
       step,
