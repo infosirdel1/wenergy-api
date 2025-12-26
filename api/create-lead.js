@@ -87,6 +87,40 @@ if (!client || !simulation || !Array.isArray(order_products)) {
     const cookieHeader = `session_id=${session_id}`;
 
     // ---------------------------------------------
+// 3bis) CRÉATION SESSION STATS (ANALYTICS)
+// ---------------------------------------------
+
+const statsSessionId = simulation?.session_id;
+
+if (!statsSessionId) {
+  throw new Error("Missing simulation.session_id for stats");
+}
+
+await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "simulator.analytics", // ⚠️ adapte si le nom technique diffère
+      method: "create",
+      args: [
+        {
+          session_id: statsSessionId,
+          event_datetime: new Date().toISOString(),
+          lang: client.lang || "fr",
+          device: simulation.device || "desktop",
+          source: simulation.source || "unknown",
+        },
+      ],
+      kwargs: {},
+    },
+    id: Date.now(),
+  },
+  { headers: { Cookie: cookieHeader } }
+);
+
+    // ---------------------------------------------
     // 4) CRÉATION DU LEAD
     // ---------------------------------------------
     const leadResp = await axios.post(
@@ -130,6 +164,56 @@ ${simulation.payback_text}
 
     const leadId = leadResp.data.result;
     if (!leadId) throw new Error("Lead non créé");
+
+    // ---------------------------------------------
+// 4bis) UPDATE STATS — FIN DE PARCOURS (COMMANDE)
+// ---------------------------------------------
+
+await axios.post(
+  `${ODOO_URL}/web/dataset/call_kw`,
+  {
+    jsonrpc: "2.0",
+    method: "call",
+    params: {
+      model: "x_simulator_analytics",
+      method: "search_read",
+      args: [
+        [["session_id", "=", simulation.session_id]],
+        ["id"]
+      ],
+      kwargs: { limit: 1 }
+    },
+    id: Date.now(),
+  },
+  { headers: { Cookie: cookieHeader } }
+).then(async (searchResp) => {
+
+  const record = searchResp.data?.result?.[0];
+  if (!record?.id) return;
+
+  await axios.post(
+    `${ODOO_URL}/web/dataset/call_kw`,
+    {
+      jsonrpc: "2.0",
+      method: "call",
+      params: {
+        model: "x_simulator_analytics",
+        method: "write",
+        args: [
+          [record.id],
+          {
+            step: "order_sent",
+            completed: true,
+            abandon_step: "none"
+          }
+        ],
+        kwargs: {}
+      },
+      id: Date.now(),
+    },
+    { headers: { Cookie: cookieHeader } }
+  );
+});
 
     // ---------------------------------------------
     // 5) CRÉATION CLIENT (PARTNER)
