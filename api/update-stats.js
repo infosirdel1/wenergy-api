@@ -187,19 +187,21 @@ const ALLOWED_LANGS = ["fr", "nl", "en"];
 
 if (
   req.body.hasOwnProperty("x_studio_lang") &&
-  ALLOWED_LANGS.includes(x_studio_lang)
+  ALLOWED_LANGS.includes(req.body.x_studio_lang)
 ) {
-  values.x_studio_lang = x_studio_lang;
+  values.x_studio_lang = req.body.x_studio_lang;
 }
+
 
     const ALLOWED_COUNTRIES = ["be", "fr"];
 
 if (
   req.body.hasOwnProperty("x_studio_country") &&
-  ALLOWED_COUNTRIES.includes(x_studio_country)
+  ALLOWED_COUNTRIES.includes(req.body.x_studio_country)
 ) {
-  values.x_studio_country = x_studio_country;
+  values.x_studio_country = req.body.x_studio_country;
 }
+
 
     const prevLog = (record?.x_studio_event_log || "").toString();
     const line =
