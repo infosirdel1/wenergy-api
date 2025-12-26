@@ -3,7 +3,7 @@ import axios from "axios";
 export default async function handler(req, res) {
 
   /* ============================================================
-     S.1 – CORS & MÉTHODE
+     S.1 – CORS
      ============================================================ */
 
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -16,24 +16,24 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log("🟢 update-stats called", req.body);
 
     /* ============================================================
-       S.2 – INPUT FRONT
+       S.2 – INPUT (API contract stable)
        ============================================================ */
 
     const {
-      client,
-      simulation,
-      order_products,
-      test
+      session_id,
+      step,
+      abandon_step,
+      completed,
+      increment_clicked_order,
+      x_studio_consumption_input   // ← AJOUT
     } = req.body || {};
 
-    if (!client || !simulation) {
-      return res.status(400).json({ status: "error", message: "Missing client or simulation" });
+    if (!session_id) {
+      return res.status(400).json({ status: "error", message: "Missing session_id" });
     }
-
-    const session_id = simulation.session_id || null;
-    const consumption_input = simulation.consumption_input || null;
 
     /* ============================================================
        S.3 – ENV ODOO
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     }
 
     /* ============================================================
-       S.4 – AUTH ODOO
+       S.4 – AUTH ODOO (cookie session)
        ============================================================ */
 
     const authResp = await axios.post(
@@ -69,44 +69,140 @@ export default async function handler(req, res) {
 
     const cookies = authResp.headers["set-cookie"];
     const sessionCookie = cookies?.find(c => c.includes("session_id"));
-    if (!sessionCookie) throw new Error("No Odoo session cookie");
-
+    if (!sessionCookie) throw new Error("No session cookie returned by Odoo");
     const cookieHeader = sessionCookie.split(";")[0];
 
     /* ============================================================
-       S.5 – CONSTRUCTION DES VALEURS LEAD / ANALYTICS
+       S.5 – SEARCH existing record by session
        ============================================================ */
 
-    const values = {
-      // identification session
-      x_studio_session_id_1: session_id,
-
-      // données client
-      x_studio_firstname: client.firstname,
-      x_studio_lastname: client.lastname,
-      x_studio_email: client.email,
-      x_studio_phone: client.phone || null,
-
-      // 🔥 DONNÉE MÉTIER CLÉ
-      x_studio_consumption_input: consumption_input,
-
-      // méta
-      x_studio_event_log: "[lead created via simulator]"
-    };
-
-    /* ============================================================
-       S.6 – CRÉATION DU LEAD (x_analytics ou crm.lead selon ton modèle)
-       ============================================================ */
-
-    const createResp = await axios.post(
+    const searchResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
         jsonrpc: "2.0",
         method: "call",
         params: {
           model: "x_analytics",
-          method: "create",
-          args: [values],
+          method: "search_read",
+          args: [[["x_studio_session_id_1", "=", session_id]]],
+          kwargs: {
+            limit: 1,
+            fields: [
+              "id",
+              "x_studio_clicked_order_count",
+              "x_studio_event_log"
+            ]
+          }
+        },
+        id: Date.now()
+      },
+      { headers: { Cookie: cookieHeader } }
+    );
+
+    const record = Array.isArray(searchResp.data?.result)
+      ? searchResp.data.result[0]
+      : null;
+
+    let recordId = record?.id || null;
+
+    /* ============================================================
+       S.6 – CREATE if missing (x_name obligatoire)
+       ============================================================ */
+
+    if (!recordId) {
+      const initCount = increment_clicked_order === 1 ? 1 : 0;
+
+      const createResp = await axios.post(
+        `${ODOO_URL}/web/dataset/call_kw`,
+        {
+          jsonrpc: "2.0",
+          method: "call",
+          params: {
+            model: "x_analytics",
+            method: "create",
+            args: [{
+              x_name: `Session ${session_id}`,
+              x_studio_session_id_1: session_id,
+              x_studio_step_reached: step ?? "start",
+              x_studio_abandon_step: abandon_step ?? null,
+              x_studio_order_sent: completed === true,
+              x_studio_clicked_order_count: initCount,
+              x_studio_event_log: "[init]"
+            }],
+            kwargs: {}
+          },
+          id: Date.now()
+        },
+        { headers: { Cookie: cookieHeader } }
+      );
+
+      recordId = createResp.data?.result || null;
+
+      if (!recordId) {
+        return res.status(500).json({
+          status: "error",
+          message: "Create failed: no id returned"
+        });
+      }
+    }
+
+    /* ============================================================
+       S.7 – BUILD UPDATE (strict)
+       ============================================================ */
+
+    const values = {};
+
+    if (step !== undefined) {
+      values.x_studio_step_reached = step;
+    }
+
+    if (abandon_step !== undefined) {
+      values.x_studio_abandon_step = abandon_step;
+    }
+
+    if (completed === true) {
+      values.x_studio_order_sent = true;
+    }
+
+    if (increment_clicked_order === 1) {
+      const prev = Number(record?.x_studio_clicked_order_count || 0);
+      values.x_studio_clicked_order_count = prev + 1;
+    }
+
+    // 🔥 CONSOMMATION (AJOUT UNIQUE)
+    if (x_studio_consumption_input !== undefined) {
+      values.x_studio_consumption_input = x_studio_consumption_input;
+    }
+
+    values.x_studio_event_datetime = new Date().toISOString();
+
+    const prevLog = (record?.x_studio_event_log || "").toString();
+    const line =
+      `[${new Date().toISOString()}] ` +
+      `step=${step ?? ""} ` +
+      `abandon=${abandon_step ?? ""} ` +
+      `completed=${completed === true ? "1" : "0"} ` +
+      `clicked=${increment_clicked_order === 1 ? "1" : "0"}`;
+
+    values.x_studio_event_log = prevLog ? `${prevLog}\n${line}` : line;
+
+    if (Object.keys(values).length === 0) {
+      return res.status(200).json({ status: "noop" });
+    }
+
+    /* ============================================================
+       S.8 – WRITE
+       ============================================================ */
+
+    const writeResp = await axios.post(
+      `${ODOO_URL}/web/dataset/call_kw`,
+      {
+        jsonrpc: "2.0",
+        method: "call",
+        params: {
+          model: "x_analytics",
+          method: "write",
+          args: [[recordId], values],
           kwargs: {}
         },
         id: Date.now()
@@ -114,24 +210,16 @@ export default async function handler(req, res) {
       { headers: { Cookie: cookieHeader } }
     );
 
-    const leadId = createResp.data?.result;
-
-    if (!leadId) {
-      return res.status(500).json({ status: "error", message: "Lead creation failed" });
-    }
-
-    /* ============================================================
-       S.7 – RÉPONSE
-       ============================================================ */
+    console.log("✅ writeResp", writeResp.data);
 
     return res.status(200).json({
       status: "success",
-      lead_id: leadId
+      record_id: recordId
     });
 
   } catch (err) {
 
-    console.error("❌ create-lead error:", err.response?.data || err);
+    console.error("❌ update-stats error:", err.response?.data || err);
 
     return res.status(500).json({
       status: "error",
