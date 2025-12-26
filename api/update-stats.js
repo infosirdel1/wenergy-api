@@ -1,4 +1,3 @@
-
 import axios from "axios";
 
 export default async function handler(req, res) {
@@ -14,14 +13,10 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({
-      status: "error",
-      message: "Only POST allowed"
-    });
+    return res.status(405).json({ status: "error", message: "Only POST allowed" });
   }
 
   try {
-
     console.log("🟢 update-stats called", req.body);
 
     // -----------------------------
@@ -36,10 +31,7 @@ export default async function handler(req, res) {
     } = req.body || {};
 
     if (!session_id) {
-      return res.status(400).json({
-        status: "error",
-        message: "Missing session_id"
-      });
+      return res.status(400).json({ status: "error", message: "Missing session_id" });
     }
 
     // -----------------------------
@@ -81,7 +73,7 @@ export default async function handler(req, res) {
     const cookieHeader = sessionCookie.split(";")[0];
 
     // -----------------------------
-    // FIND ANALYTICS RECORD
+    // SEARCH EXISTING ANALYTICS
     // -----------------------------
     const searchResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
@@ -91,10 +83,7 @@ export default async function handler(req, res) {
         params: {
           model: "x_analytics",
           method: "search_read",
-          args: [
-            [["x_studio_session_id", "=", session_id]],
-            ["id", "x_studio_clicked_order_count"]
-          ],
+          args: [[["x_studio_session_id", "=", session_id]]],
           kwargs: { limit: 1 }
         },
         id: Date.now()
@@ -140,17 +129,9 @@ export default async function handler(req, res) {
     // -----------------------------
     const values = {};
 
-    if (step !== undefined) {
-      values.x_studio_step_reached = step;
-    }
-
-    if (abandon_step !== undefined) {
-      values.x_studio_abandon_step = abandon_step;
-    }
-
-    if (completed === true) {
-      values.x_studio_order_sent = true;
-    }
+    if (step !== undefined) values.x_studio_step_reached = step;
+    if (abandon_step !== undefined) values.x_studio_abandon_step = abandon_step;
+    if (completed === true) values.x_studio_order_sent = true;
 
     if (increment_clicked_order === 1) {
       values.x_studio_clicked_order_count =
