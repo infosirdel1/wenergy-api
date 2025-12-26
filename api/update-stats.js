@@ -190,6 +190,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "noop" });
     }
 
+    console.log("🧪 VALUES AVANT WRITE =", values);
+
     /* ============================================================
        S.8 – WRITE
        ============================================================ */
