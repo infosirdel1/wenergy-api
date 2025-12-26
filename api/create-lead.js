@@ -102,23 +102,24 @@ await axios.post(
     jsonrpc: "2.0",
     method: "call",
     params: {
-      model: "simulator.analytics", // ⚠️ adapte si le nom technique diffère
+      model: "x_simulator_analytics",
       method: "create",
       args: [
         {
-          session_id: statsSessionId,
-          event_datetime: new Date().toISOString(),
-          lang: client.lang || "fr",
-          device: simulation.device || "desktop",
-          source: simulation.source || "unknown",
-        },
+          x_studio_session_id: statsSessionId,
+          x_studio_event_datetime: new Date().toISOString(),
+          x_studio_lang: client.lang || "fr",
+          x_studio_device: simulation.device || "desktop",
+          x_studio_source: simulation.source || "unknown"
+        }
       ],
-      kwargs: {},
+      kwargs: {}
     },
-    id: Date.now(),
+    id: Date.now()
   },
   { headers: { Cookie: cookieHeader } }
 );
+
 
     // ---------------------------------------------
     // 4) CRÉATION DU LEAD
