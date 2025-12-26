@@ -128,6 +128,8 @@ export default async function handler(req, res) {
             method: "create",
             args: [
               {
+
+                x_name: `Session ${x_studio_session_id_1}`, // ✅ OBLIGATOIRE
                 // ✅ IMPORTANT : on écrit bien dans le champ texte
                 x_studio_session_id_1: x_studio_session_id_1,
 
