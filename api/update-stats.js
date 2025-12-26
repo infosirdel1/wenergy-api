@@ -1,7 +1,9 @@
 import axios from "axios";
 
 export default async function handler(req, res) {
+  // -----------------------------
   // CORS
+  // -----------------------------
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -18,6 +20,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    // -----------------------------
+    // INPUT
+    // -----------------------------
     const {
       session_id,
       step,
@@ -84,10 +89,7 @@ export default async function handler(req, res) {
           method: "search_read",
           args: [
             [["x_studio_session_id", "=", session_id]],
-            [
-              "id",
-              "x_studio_clicked_order_count"
-            ]
+            ["id", "x_studio_clicked_order_count"]
           ],
           kwargs: { limit: 1 }
         },
@@ -96,14 +98,41 @@ export default async function handler(req, res) {
       { headers: { Cookie: cookieHeader } }
     );
 
-    const record = searchResp.data?.result?.[0];
-    if (!record?.id) {
-      // Pas d’analytics trouvée → on ignore silencieusement
-      return res.status(200).json({ status: "ignored" });
+    const record = searchResp.data?.result?.[0] || null;
+    let recordId = record?.id || null;
+
+    // -----------------------------
+    // CREATE RECORD IF MISSING
+    // -----------------------------
+    if (!recordId) {
+      const createResp = await axios.post(
+        `${ODOO_URL}/web/dataset/call_kw`,
+        {
+          jsonrpc: "2.0",
+          method: "call",
+          params: {
+            model: "x_analytics",
+            method: "create",
+            args: [{
+              x_studio_session_id: session_id,
+              x_studio_step_reached: step || "start",
+              x_studio_abandon_step: abandon_step || null,
+              x_studio_order_sent: completed === true,
+              x_studio_clicked_order_count: increment_clicked_order === 1 ? 1 : 0,
+              x_studio_event_log: "[init]"
+            }],
+            kwargs: {}
+          },
+          id: Date.now()
+        },
+        { headers: { Cookie: cookieHeader } }
+      );
+
+      recordId = createResp.data?.result;
     }
 
     // -----------------------------
-    // BUILD UPDATE PAYLOAD (STRICT)
+    // BUILD UPDATE PAYLOAD
     // -----------------------------
     const values = {};
 
@@ -121,7 +150,7 @@ export default async function handler(req, res) {
 
     if (increment_clicked_order === 1) {
       values.x_studio_clicked_order_count =
-        (record.x_studio_clicked_order_count || 0) + 1;
+        (record?.x_studio_clicked_order_count || 0) + 1;
     }
 
     if (Object.keys(values).length === 0) {
@@ -137,9 +166,9 @@ export default async function handler(req, res) {
         jsonrpc: "2.0",
         method: "call",
         params: {
-            model: "x_analytics",
+          model: "x_analytics",
           method: "write",
-          args: [[record.id], values],
+          args: [[recordId], values],
           kwargs: {}
         },
         id: Date.now()
