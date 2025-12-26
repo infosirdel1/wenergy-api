@@ -18,6 +18,8 @@ export default async function handler(req, res) {
   try {
     console.log("🟢 update-stats called", req.body);
 
+    
+
     /* ============================================================
        S.2 – INPUT (API contract stable)
        ============================================================ */
@@ -200,6 +202,15 @@ if (
   ALLOWED_COUNTRIES.includes(req.body.x_studio_country)
 ) {
   values.x_studio_country = req.body.x_studio_country;
+}
+
+const ALLOWED_DEVICES = ["desktop", "mobile", "tablet"];
+
+if (
+  req.body.hasOwnProperty("x_studio_device") &&
+  ALLOWED_DEVICES.includes(req.body.x_studio_device)
+) {
+  values.x_studio_device = req.body.x_studio_device;
 }
 
 
