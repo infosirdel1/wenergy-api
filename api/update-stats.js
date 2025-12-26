@@ -11,16 +11,31 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ status: "error", message: "Only POST allowed" });
+    return res.status(405).json({
+      status: "error",
+      message: "Only POST allowed"
+    });
   }
 
   try {
-    const { session_id, step, abandon_step, completed, increment_clicked_order } = req.body || {};
+    const {
+      session_id,
+      step,
+      abandon_step,
+      completed,
+      increment_clicked_order
+    } = req.body || {};
 
     if (!session_id) {
-      return res.status(400).json({ status: "error", message: "Missing session_id" });
+      return res.status(400).json({
+        status: "error",
+        message: "Missing session_id"
+      });
     }
 
+    // -----------------------------
+    // ENV ODOO
+    // -----------------------------
     const ODOO_URL      = process.env.ODOO_URL;
     const ODOO_DB       = process.env.ODOO_DB;
     const ODOO_USER     = process.env.ODOO_USER;
@@ -30,7 +45,9 @@ export default async function handler(req, res) {
       throw new Error("Missing Odoo env variables");
     }
 
-    // Auth Odoo
+    // -----------------------------
+    // AUTH ODOO
+    // -----------------------------
     const authResp = await axios.post(
       `${ODOO_URL}/web/session/authenticate`,
       {
@@ -39,20 +56,24 @@ export default async function handler(req, res) {
         params: {
           db: ODOO_DB,
           login: ODOO_USER,
-          password: ODOO_PASSWORD,
+          password: ODOO_PASSWORD
         },
-        id: Date.now(),
+        id: Date.now()
       },
       { headers: { "Content-Type": "application/json" } }
     );
 
     const cookies = authResp.headers["set-cookie"];
     const sessionCookie = cookies?.find(c => c.includes("session_id"));
-    if (!sessionCookie) throw new Error("No session cookie");
+    if (!sessionCookie) {
+      throw new Error("No session cookie returned by Odoo");
+    }
 
     const cookieHeader = sessionCookie.split(";")[0];
 
-    // Recherche de la session analytics
+    // -----------------------------
+    // FIND ANALYTICS RECORD
+    // -----------------------------
     const searchResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -61,32 +82,55 @@ export default async function handler(req, res) {
         params: {
           model: "x_simulator_analytics",
           method: "search_read",
-          args: [[["session_id", "=", session_id]], ["id"]],
-          kwargs: { limit: 1 },
+          args: [
+            [["x_studio_session_id", "=", session_id]],
+            [
+              "id",
+              "x_studio_clicked_order_count"
+            ]
+          ],
+          kwargs: { limit: 1 }
         },
-        id: Date.now(),
+        id: Date.now()
       },
       { headers: { Cookie: cookieHeader } }
     );
 
     const record = searchResp.data?.result?.[0];
     if (!record?.id) {
+      // Pas d’analytics trouvée → on ignore silencieusement
       return res.status(200).json({ status: "ignored" });
     }
 
-    // Build update payload
+    // -----------------------------
+    // BUILD UPDATE PAYLOAD (STRICT)
+    // -----------------------------
     const values = {};
-    if (step !== undefined) values.step = step;
-    if (abandon_step !== undefined) values.abandon_step = abandon_step;
-    if (completed !== undefined) values.completed = completed;
+
+    if (step !== undefined) {
+      values.x_studio_step_reached = step;
+    }
+
+    if (abandon_step !== undefined) {
+      values.x_studio_abandon_step = abandon_step;
+    }
+
+    if (completed === true) {
+      values.x_studio_order_sent = true;
+    }
+
     if (increment_clicked_order === 1) {
-      values.clicked_order = (record.clicked_order || 0) + 1;
+      values.x_studio_clicked_order_count =
+        (record.x_studio_clicked_order_count || 0) + 1;
     }
 
     if (Object.keys(values).length === 0) {
       return res.status(200).json({ status: "noop" });
     }
 
+    // -----------------------------
+    // WRITE UPDATE
+    // -----------------------------
     await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
       {
@@ -96,9 +140,9 @@ export default async function handler(req, res) {
           model: "x_simulator_analytics",
           method: "write",
           args: [[record.id], values],
-          kwargs: {},
+          kwargs: {}
         },
-        id: Date.now(),
+        id: Date.now()
       },
       { headers: { Cookie: cookieHeader } }
     );
@@ -109,7 +153,7 @@ export default async function handler(req, res) {
     console.error("❌ update-stats error:", err.response?.data || err);
     return res.status(500).json({
       status: "error",
-      detail: err.response?.data || err.toString(),
+      detail: err.response?.data || err.toString()
     });
   }
 }
