@@ -149,19 +149,22 @@ export default async function handler(req, res) {
       }
     }
 
-    /* ============================================================
-       S.7 – BUILD UPDATE (strict)
-       ============================================================ */
+/* ============================================================
+   S.7 – BUILD UPDATE (strict)
+   ============================================================ */
 
-    const values = {};
+const values = {};
 
-    if (step !== undefined) {
-      values.x_studio_step_reached = step;
-    }
+// x_studio_step_reached est un champ "selection" → on évite les valeurs invalides
+const ALLOWED_STEPS = ["start", "battery", "pv", "results", "order"];
 
-    if (abandon_step !== undefined) {
-      values.x_studio_abandon_step = abandon_step;
-    }
+if (step !== undefined && ALLOWED_STEPS.includes(step)) {
+  values.x_studio_step_reached = step;
+}
+
+if (abandon_step !== undefined) {
+  values.x_studio_abandon_step = abandon_step;
+}
 
     if (completed === true) {
       values.x_studio_order_sent = true;
