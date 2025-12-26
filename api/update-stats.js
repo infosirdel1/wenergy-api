@@ -80,7 +80,7 @@ export default async function handler(req, res) {
         jsonrpc: "2.0",
         method: "call",
         params: {
-          model: "x_simulator_analytics",
+          model: "x_analytics",
           method: "search_read",
           args: [
             [["x_studio_session_id", "=", session_id]],
@@ -137,7 +137,7 @@ export default async function handler(req, res) {
         jsonrpc: "2.0",
         method: "call",
         params: {
-          model: "x_simulator_analytics",
+            model: "x_analytics",
           method: "write",
           args: [[record.id], values],
           kwargs: {}
