@@ -170,9 +170,9 @@ export default async function handler(req, res) {
     }
 
     // 🔥 CONSOMMATION (AJOUT UNIQUE)
-    if (x_studio_consumption_input !== undefined) {
-      values.x_studio_consumption_input = x_studio_consumption_input;
-    }
+   if (req.body.hasOwnProperty("x_studio_consumption_input")) {
+  values.x_studio_consumption_input = x_studio_consumption_input;
+}
 
     values.x_studio_event_datetime = new Date().toISOString();
 
