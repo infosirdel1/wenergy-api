@@ -179,8 +179,9 @@ if (abandon_step !== undefined) {
    if (req.body.hasOwnProperty("x_studio_consumption_input")) {
   values.x_studio_consumption_input = x_studio_consumption_input;
 }
+values.x_studio_event_datetime =
+  new Date().toISOString().replace("T", " ").substring(0, 19);
 
-    values.x_studio_event_datetime = new Date().toISOString();
 
     const prevLog = (record?.x_studio_event_log || "").toString();
     const line =
