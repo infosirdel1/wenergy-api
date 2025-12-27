@@ -127,20 +127,23 @@ export default async function handler(req, res) {
             model: "x_analytics",
             method: "create",
             args: [{
-  x_name: `Session ${session_id}`,
-  x_studio_session_id_1: session_id,
+              x_name: `Session ${session_id}`,
+              x_studio_session_id_1: session_id,
 
-  // AJOUT MINIMAL
-  ...(req.body.hasOwnProperty("x_studio_consumption_input")
-    ? { x_studio_consumption_input: req.body.x_studio_consumption_input }
-    : {}),
+              ...(req.body.hasOwnProperty("x_studio_consumption_input")
+              ? { x_studio_consumption_input: req.body.x_studio_consumption_input }
+              : {}),
 
-  x_studio_step_reached: step ?? "start",
-  x_studio_abandon_step: abandon_step ?? null,
-  x_studio_order_sent: completed === true,
-  x_studio_clicked_order_count: initCount,
-  x_studio_event_log: "[init]"
-            }],
+              ...(req.body.hasOwnProperty("x_studio_lang")
+              ? { x_studio_lang: req.body.x_studio_lang }
+              :  {}),
+
+            x_studio_step_reached: step ?? "start",
+            x_studio_abandon_step: abandon_step ?? null,
+            x_studio_order_sent: completed === true,
+            x_studio_clicked_order_count: initCount,
+            x_studio_event_log: "[init]"
+}]
             kwargs: {}
           },
           id: Date.now()
@@ -169,6 +172,10 @@ const ALLOWED_STEPS = ["start", "battery", "pv", "results", "order"];
 
 if (step !== undefined && ALLOWED_STEPS.includes(step)) {
   values.x_studio_step_reached = step;
+}
+
+if (req.body.hasOwnProperty("x_studio_know_conso")) {
+  values.x_studio_know_conso = req.body.x_studio_know_conso;
 }
 
 if (abandon_step !== undefined) {
