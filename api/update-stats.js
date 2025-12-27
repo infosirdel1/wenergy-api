@@ -143,7 +143,7 @@ export default async function handler(req, res) {
             x_studio_order_sent: completed === true,
             x_studio_clicked_order_count: initCount,
             x_studio_event_log: "[init]"
-}]
+}],
             kwargs: {}
           },
           id: Date.now()
