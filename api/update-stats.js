@@ -204,6 +204,16 @@ if (
 
 const ALLOWED_DEVICES = ["desktop", "mobile", "tablet"];
 
+// BATTERY — modèle
+if (req.body.hasOwnProperty("x_studio_battery_model")) {
+  values.x_studio_battery_model = req.body.x_studio_battery_model;
+}
+
+// BATTERY — nombre
+if (req.body.hasOwnProperty("x_studio_battery_count")) {
+  values.x_studio_battery_count = req.body.x_studio_battery_count;
+}
+
 if (
   req.body.hasOwnProperty("x_studio_device") &&
   ALLOWED_DEVICES.includes(req.body.x_studio_device)
