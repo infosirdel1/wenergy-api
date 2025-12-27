@@ -178,8 +178,8 @@ if (abandon_step !== undefined) {
       values.x_studio_clicked_order_count = prev + 1;
     }
     
-   if (req.body.hasOwnProperty("x_studio_consumption_input")) {
-  values.x_studio_consumption_input = x_studio_consumption_input;
+  if (req.body.hasOwnProperty("x_studio_consumption_input")) {
+  values.x_studio_consumption_input = req.body.x_studio_consumption_input;
 }
 values.x_studio_event_datetime =
   new Date().toISOString().replace("T", " ").substring(0, 19);
