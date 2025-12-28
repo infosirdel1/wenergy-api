@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     console.log("🧪 BODY KEYS =", Object.keys(req.body || {}));
     
     const {
-      session_id,
+      x_studio_session_id_1,
       step,
       abandon_step,
       completed,
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       x_studio_lang
     } = req.body || {};
 
-    if (!session_id) {
+    if (!x_studio_session_id_1) {
       return res.status(400).json({ status: "error", message: "Missing session_id" });
     }
 
@@ -90,7 +90,7 @@ export default async function handler(req, res) {
         params: {
           model: "x_analytics",
           method: "search_read",
-          args: [[["x_studio_session_id_1", "=", session_id]]],
+          args: [[["x_studio_session_id_1", "=", x_studio_session_id_1]]],
           kwargs: {
             limit: 1,
             fields: [
@@ -127,8 +127,8 @@ export default async function handler(req, res) {
             model: "x_analytics",
             method: "create",
             args: [{
-              x_name: `Session ${session_id}`,
-              x_studio_session_id_1: session_id,
+              x_name: `Session ${x_studio_session_id_1}`,
+              x_studio_session_id_1: x_studio_session_id_1,
 
               ...(req.body.hasOwnProperty("x_studio_consumption_input")
               ? { x_studio_consumption_input: req.body.x_studio_consumption_input }
