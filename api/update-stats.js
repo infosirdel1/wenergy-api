@@ -247,6 +247,11 @@ if (
   values.x_studio_has_pv = req.body.x_studio_has_pv;
 }
 
+    // PV — nombre de panneaux
+if (req.body.hasOwnProperty("x_studio_pv_panels")) {
+  values.x_studio_pv_panels = String(req.body.x_studio_pv_panels);
+}
+
 
 if (
   req.body.hasOwnProperty("x_studio_device") &&
