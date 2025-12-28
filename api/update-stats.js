@@ -257,6 +257,21 @@ if (req.body.hasOwnProperty("x_studio_pose_type")) {
   values.x_studio_pose_type = req.body.x_studio_pose_type;
 }
 
+    // RESULT — gain total
+if (req.body.hasOwnProperty('x_studio_gain_eur')) {
+  values.x_studio_gain_eur = req.body.x_studio_gain_eur;
+}
+
+// RESULT — payback (année)
+if (req.body.hasOwnProperty('x_studio_payback_year')) {
+  values.x_studio_payback_year = req.body.x_studio_payback_year;
+}
+
+// RESULT — investissement total TTC
+if (req.body.hasOwnProperty('x_studio_invest_ttc')) {
+  values.x_studio_invest_ttc = req.body.x_studio_invest_ttc;
+}
+    
 if (
   req.body.hasOwnProperty("x_studio_device") &&
   ALLOWED_DEVICES.includes(req.body.x_studio_device)
