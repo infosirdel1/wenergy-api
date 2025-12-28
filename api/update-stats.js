@@ -237,6 +237,16 @@ if (
   values.x_studio_install_option = req.body.x_studio_install_option;
 }
 
+    // PV — présence (yes/no)
+const ALLOWED_PV = ["yes", "no"];
+
+if (
+  req.body.hasOwnProperty("x_studio_has_pv") &&
+  ALLOWED_PV.includes(req.body.x_studio_has_pv)
+) {
+  values.x_studio_has_pv = req.body.x_studio_has_pv;
+}
+
 
 if (
   req.body.hasOwnProperty("x_studio_device") &&
