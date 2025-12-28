@@ -271,6 +271,11 @@ if (req.body.hasOwnProperty('x_studio_payback_year')) {
 if (req.body.hasOwnProperty('x_studio_invest_ttc')) {
   values.x_studio_invest_ttc = req.body.x_studio_invest_ttc;
 }
+
+// COMMANDE — envoyée (statut final)
+if (req.body.hasOwnProperty("x_studio_command_sent")) {
+  values.x_studio_command_sent = req.body.x_studio_command_sent;
+}
     
 if (
   req.body.hasOwnProperty("x_studio_device") &&
