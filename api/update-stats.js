@@ -252,6 +252,10 @@ if (req.body.hasOwnProperty("x_studio_pv_panels")) {
   values.x_studio_pv_panels = String(req.body.x_studio_pv_panels);
 }
 
+    // INSTALLATION — type de pose (char libre)
+if (req.body.hasOwnProperty("x_studio_pose_type")) {
+  values.x_studio_pose_type = req.body.x_studio_pose_type;
+}
 
 if (
   req.body.hasOwnProperty("x_studio_device") &&
