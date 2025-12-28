@@ -227,6 +227,16 @@ if (req.body.hasOwnProperty("x_studio_battery_count")) {
   values.x_studio_battery_count = req.body.x_studio_battery_count;
 }
 
+    // INSTALLATION — option
+const ALLOWED_INSTALL_OPTIONS = ["battery_only", "battery_pv"];
+
+if (
+  req.body.hasOwnProperty("x_studio_install_option") &&
+  ALLOWED_INSTALL_OPTIONS.includes(req.body.x_studio_install_option)
+) {
+  values.x_studio_install_option = req.body.x_studio_install_option;
+}
+
 if (
   req.body.hasOwnProperty("x_studio_device") &&
   ALLOWED_DEVICES.includes(req.body.x_studio_device)
