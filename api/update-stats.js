@@ -30,7 +30,6 @@ export default async function handler(req, res) {
     const {
       x_studio_session_id_1,
       step,
-      abandon_step,
       completed,
       increment_clicked_order,
       x_studio_consumption_input,
