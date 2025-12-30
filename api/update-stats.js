@@ -138,7 +138,6 @@ export default async function handler(req, res) {
               :  {}),
 
             x_studio_step_reached: step ?? "start",
-            x_studio_abandon_step: abandon_step ?? null,
             x_studio_order_sent: completed === true,
             x_studio_clicked_order_count: initCount,
             x_studio_event_log: "[init]"
@@ -175,10 +174,6 @@ if (step !== undefined && ALLOWED_STEPS.includes(step)) {
 
 if (req.body.hasOwnProperty("x_studio_know_conso")) {
   values.x_studio_know_conso = req.body.x_studio_know_conso;
-}
-
-if (abandon_step !== undefined) {
-  values.x_studio_abandon_step = abandon_step;
 }
 
     if (completed === true) {
@@ -296,7 +291,6 @@ if (
     const line =
       `[${new Date().toISOString()}] ` +
       `step=${step ?? ""} ` +
-      `abandon=${abandon_step ?? ""} ` +
       `completed=${completed === true ? "1" : "0"} ` +
       `clicked=${increment_clicked_order === 1 ? "1" : "0"}`;
 
