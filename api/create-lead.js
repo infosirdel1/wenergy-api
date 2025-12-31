@@ -147,6 +147,9 @@ if (!client || !simulation || !Array.isArray(order_products)) {
               type: "opportunity",
               partner_id: partnerId,
               partner_name: client.company || undefined,
+              x_studio_consumption: Number(simulation.consumption) || 0,
+              x_studio_total_capacity: Number(simulation.total_capacity) || 0,
+              x_studio_invest_ttc: Number(simulation.invest_ttc) || 0,
               x_studio_preference_de_livraison: client.delivery_pref || "",
 
               description: `
