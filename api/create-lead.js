@@ -28,10 +28,6 @@ export default async function handler(req, res) {
 // ---------------------------------------------
 const body = req.body || {};
 
-    // 🔎 DEBUG GLOBAL — BODY COMPLET DU SIMULATEUR
-console.log("FULL BODY RECEIVED ===>");
-console.log(JSON.stringify(body, null, 2));
-
 const client         = body.client;
 const simulation     = body.simulation;
 const order_products = body.order_products;
@@ -169,9 +165,6 @@ ${simulation.payback_text}
       },
       { headers: { Cookie: cookieHeader } }
     );
-
-    console.log("DEBUG LEAD CREATE RAW ===>");
-console.log(JSON.stringify(leadResp.data, null, 2));
 
     const leadId = leadResp.data.result;
     if (!leadId) throw new Error("Lead non créé");
