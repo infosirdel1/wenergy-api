@@ -90,55 +90,8 @@ if (!client || !simulation || !Array.isArray(order_products)) {
 
     const cookieHeader = `session_id=${session_id}`;
 
-
-    // ---------------------------------------------
-    // 4) CRÉATION DU LEAD
-    // ---------------------------------------------
-    const leadResp = await axios.post(
-      `${ODOO_URL}/web/dataset/call_kw`,
-      {
-        jsonrpc: "2.0",
-        method: "call",
-        params: {
-          model: "crm.lead",
-          method: "create",
-          args: [
-            {
-              name: `Demande simulateur – ${client.firstname} ${client.lastname}`,
-              contact_name: `${client.firstname} ${client.lastname}`,
-              email_from: client.email,
-              phone: client.phone,
-              street: client.address,
-              zip: client.zip,
-              city: client.city,
-              type: "opportunity",
-              partner_name: client.company || undefined,
-              x_studio_preference_de_livraison: client.delivery_pref || "",
-
-              description: `
-TVA : ${client.vat || ""}
-
-Simulation :
-${simulation.summary_html}
-
-Payback :
-${simulation.payback_text}
-              `,
-            },
-          ],
-          kwargs: {},
-        },
-        id: Date.now(),
-      },
-      { headers: { Cookie: cookieHeader } }
-    );
-
-    const leadId = leadResp.data.result;
-    if (!leadId) throw new Error("Lead non créé");
-
- 
-    // ---------------------------------------------
-    // 5) CRÉATION CLIENT (PARTNER)
+        // ---------------------------------------------
+    // 4) CRÉATION CLIENT (PARTNER)
     // ---------------------------------------------
     const partnerResp = await axios.post(
       `${ODOO_URL}/web/dataset/call_kw`,
@@ -170,6 +123,52 @@ ${simulation.payback_text}
 
     const partnerId = partnerResp.data.result;
     if (!partnerId) throw new Error("Partner non créé");
+
+    // ---------------------------------------------
+    // 5) CRÉATION DU LEAD
+    // ---------------------------------------------
+    const leadResp = await axios.post(
+      `${ODOO_URL}/web/dataset/call_kw`,
+      {
+        jsonrpc: "2.0",
+        method: "call",
+        params: {
+          model: "crm.lead",
+          method: "create",
+          args: [
+            {
+              name: `Demande simulateur – ${client.firstname} ${client.lastname}`,
+              contact_name: `${client.firstname} ${client.lastname}`,
+              email_from: client.email,
+              phone: client.phone,
+              street: client.address,
+              zip: client.zip,
+              city: client.city,
+              type: "opportunity",
+              partner_id: partnerId,
+              partner_name: client.company || undefined,
+              x_studio_preference_de_livraison: client.delivery_pref || "",
+
+              description: `
+TVA : ${client.vat || ""}
+
+Simulation :
+${simulation.summary_html}
+
+Payback :
+${simulation.payback_text}
+              `,
+            },
+          ],
+          kwargs: {},
+        },
+        id: Date.now(),
+      },
+      { headers: { Cookie: cookieHeader } }
+    );
+
+    const leadId = leadResp.data.result;
+    if (!leadId) throw new Error("Lead non créé");
 
  // ---------------------------------------------
 // 6) CRÉATION DU DEVIS (FIX)
