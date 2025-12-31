@@ -28,6 +28,10 @@ export default async function handler(req, res) {
 // ---------------------------------------------
 const body = req.body || {};
 
+    // 🔎 DEBUG GLOBAL — BODY COMPLET DU SIMULATEUR
+console.log("FULL BODY RECEIVED ===>");
+console.log(JSON.stringify(body, null, 2));
+
 const client         = body.client;
 const simulation     = body.simulation;
 const order_products = body.order_products;
