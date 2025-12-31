@@ -170,6 +170,9 @@ ${simulation.payback_text}
       { headers: { Cookie: cookieHeader } }
     );
 
+    console.log("DEBUG LEAD CREATE RAW ===>");
+console.log(JSON.stringify(leadResp.data, null, 2));
+
     const leadId = leadResp.data.result;
     if (!leadId) throw new Error("Lead non créé");
 
