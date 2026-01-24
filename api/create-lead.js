@@ -41,7 +41,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // ---------------------------------------------
+
+  // ---------------------------------------------
 // 1) DONNÉES REÇUES DU SIMULATEUR
 // ---------------------------------------------
 const body = req.body || {};
@@ -51,8 +52,19 @@ const simulation     = body.simulation;
 const order_products = body.order_products;
 const test           = body.test;
 
-console.log("DEBUG delivery_pref (backend) =>", client?.delivery_pref);
-console.log("DEBUG order_products (backend) =>", order_products);
+// ✅ DEBUG HARD — ce que reçoit vraiment l’API
+console.log("========== CREATE-LEAD INPUT ==========");
+console.log("client =", JSON.stringify(client, null, 2));
+console.log("simulation =", JSON.stringify(simulation, null, 2));
+console.log("order_products =", JSON.stringify(order_products, null, 2));
+
+const debugLines = (order_products || []).map(l => ({
+  odoo_product_id: l?.odoo_product_id,
+  quantity: l?.quantity,
+  unit_price_ht: l?.unit_price_ht,
+}));
+console.log("order_products (lines) =", JSON.stringify(debugLines, null, 2));
+console.log("=======================================");
 
 if (!client || !simulation || !Array.isArray(order_products)) {
   return res.status(400).json({
@@ -60,7 +72,6 @@ if (!client || !simulation || !Array.isArray(order_products)) {
     message: "Missing client, simulation or order_products",
   });
 }
-
 
     // ---------------------------------------------
     // 2) VARIABLES ODOO
