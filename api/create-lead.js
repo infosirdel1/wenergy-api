@@ -308,35 +308,42 @@ const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 // ---------------------------------------------
 // 10) WRITE FIRESTORE (SAFE SERVERLESS)
 // ---------------------------------------------
-try {
-  await Promise.race([
-    firestore.collection("requests").add({
-      created_at: new Date(),
+firestore.collection("requests").add({
+  created_at: new Date(),
 
-      client,
-      simulation,
-      order_products,
+  // ✅ SCHÉMA PLATEFORME (OBLIGATOIRE)
+  address: {
+    street: client.street,
+    number: client.street_number,
+    city: client.city,
+    zipcode: client.zip,
+  },
 
-      odoo: {
-        lead_id: leadId,
-        partner_id: partnerId,
-        quotation_id: quotationId,
-        portal_url,
-      },
+  client: {
+    firstName: client.firstname,
+    lastName: client.lastname,
+    phone: client.phone,
+  },
 
-      source: "simulateur_ui",
-    }),
+  work: {
+    type: "battery",
+    amount: simulation.invest_ttc,
+  },
 
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Firestore timeout")), 2000)
-    )
-  ]);
+  payment_status: "pending",
 
-  console.log("🔥 Firestore write OK");
+  // ✅ DONNÉES SIMULATEUR (BONUS, NON BLOQUANT)
+  simulation,
+  order_products,
+  odoo: {
+    lead_id: leadId,
+    partner_id: partnerId,
+    quotation_id: quotationId,
+    portal_url,
+  },
 
-} catch (err) {
-  console.error("❌ Firestore skipped:", err.message);
-}
+  source: "simulateur_ui",
+});
 
     
     // ---------------------------------------------
