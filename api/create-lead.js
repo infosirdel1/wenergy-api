@@ -364,18 +364,13 @@ try {
       // 🔢 update compteur
       tx.set(counterRef, { requests: next }, { merge: true });
 
-      // ===== TYPE (plateforme: pv OU battery uniquement) =====
-      const workType =
-        panelCount > 0 && batteryCount <= 0
-          ? "pv"
-          : "battery"; // battery seul OU battery+pv
+      // ===== TYPE TRAVAUX (RÈGLE MÉTIER VALIDÉE) =====
+      const workType = panelCount > 0 ? "pv" : "battery";
 
-      // ===== DEBUG (à garder 1 jour) =====
+      // ===== DEBUG =====
       console.log("[FS] batteryCount =", batteryCount);
       console.log("[FS] panelCount   =", panelCount);
       console.log("[FS] workType     =", workType);
-      console.log("[FS] sim keys     =", Object.keys(simulation || {}));
-      console.log("[FS] pricing keys =", Object.keys(simulation?.pricing_breakdown || {}));
 
       // ===== CRÉATION REQUEST =====
       const requestRef = firestore.collection("requests").doc();
@@ -410,7 +405,7 @@ try {
       });
     }),
 
-    // ⏱️ garde serverless (2s = trop court en prod)
+    // ⏱️ garde serverless
     new Promise((_, reject) =>
       setTimeout(() => reject(new Error("Firestore timeout")), 10000)
     )
