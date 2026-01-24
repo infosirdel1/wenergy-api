@@ -328,15 +328,9 @@ try {
 
       work: {
         type: "battery",
-        amount: simulation.invest_ttc,
       },
 
       payment_status: "pending",
-
-      simulation,
-      order_products,
-
-      source: "simulateur_ui",
     }),
 
     new Promise((_, reject) =>
