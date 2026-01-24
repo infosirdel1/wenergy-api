@@ -14,12 +14,15 @@ const ALLOWED_ORIGINS = [
 
 function setCors(req, res) {
   const origin = req.headers.origin;
+
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
+
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Content-Type", "application/json");
 }
 
 /* ==============================
@@ -40,7 +43,6 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
-
 
 /* ==============================
    API HANDLER
@@ -88,7 +90,7 @@ export default async function handler(req, res) {
 
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(counterRef);
-      requestNumber = snap.exists ? snap.data().value + 1 : 1;
+      requestNumber = snap.exists ? (snap.data().value || 0) + 1 : 1;
 
       tx.set(counterRef, { value: requestNumber }, { merge: true });
 
@@ -100,9 +102,25 @@ export default async function handler(req, res) {
         created_at: Date.now(),
         source: "simulator",
         payment_status: "pending_payment",
-        client: { firstName: firstname, lastName: lastname, phone: phone || "" },
-        address: { street: street || "", number: number || "", zipcode, city },
-        work: { type: installation_type, pv_count, amount },
+
+        client: {
+          firstName: firstname,
+          lastName: lastname,
+          phone: phone || "",
+        },
+
+        address: {
+          street: street || "",
+          number: number || "",
+          zipcode,
+          city,
+        },
+
+        work: {
+          type: installation_type,
+          pv_count: Number(pv_count || 0),
+          amount,
+        },
       });
     });
 
@@ -111,8 +129,8 @@ export default async function handler(req, res) {
       request_id: requestId,
       request_number: requestNumber,
     });
-  } catch (e) {
-    console.error(e);
+  } catch (err) {
+    console.error("[SIMULATOR → FIRESTORE]", err);
     return res.status(500).json({ error: "firestore_error" });
   }
 }
