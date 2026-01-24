@@ -357,7 +357,7 @@ try {
 
           battery_count: Number(simulation.battery_count) || 0,
           panel_count: Number(simulation.pricing_breakdown?.pv_panels) || 0,
-          amount: Number(simulation.invest_ttc) || 0,
+        
         },
 
         payment_status: "pending",
