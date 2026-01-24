@@ -323,6 +323,12 @@ firestore.collection("requests").add({
   },
 
   source: "simulateur_ui",
+})
+.then(() => {
+  console.log("🔥 Firestore write OK");
+})
+.catch((err) => {
+  console.error("❌ Firestore write failed", err);
 });
 
     
