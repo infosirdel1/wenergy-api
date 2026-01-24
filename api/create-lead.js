@@ -364,11 +364,20 @@ try {
           phone: client.phone || "",
         },
 
-        work: {
-          type: workType,
-          battery_count: batteryCount,
-          panel_count: panelCount,
-        },
+       work: {
+  type:
+    simulation.installation_option === "pv_only"
+      ? "pv"
+      : "battery",
+
+  battery_count: Number(
+    simulation.pricing_breakdown?.battery_count
+  ) || 0,
+
+  panel_count: Number(
+    simulation.pricing_breakdown?.pv_panels
+  ) || 0,
+},
 
         payment_status: "pending",
       });
