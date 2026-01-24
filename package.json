@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "axios": "latest",
-    "express": "latest"
+    "express": "latest",
+    "firebase-admin": "^12.0.0"
   }
 }
