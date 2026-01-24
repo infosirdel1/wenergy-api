@@ -306,49 +306,70 @@ const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 
     
 // ---------------------------------------------
-// 10) WRITE FIRESTORE (SAFE SERVERLESS)
+// 10) WRITE FIRESTORE + COUNT (SAFE SERVERLESS)
 // ---------------------------------------------
 try {
   await Promise.race([
-    firestore.collection("requests").add({
-      created_at: new Date(),
 
-      address: {
-        street: client.street,
-        number: client.street_number,
-        city: client.city,
-        zipcode: client.zip,
-      },
+    firestore.runTransaction(async (tx) => {
 
-      client: {
-        firstName: client.firstname,
-        lastName: client.lastname,
-        phone: client.phone,
-      },
+      const counterRef = firestore.collection("meta").doc("counters");
+      const counterSnap = await tx.get(counterRef);
 
-  work: {
-  type:
-    simulation.installation_option === "battery_only"
-      ? "battery"
-      : simulation.installation_option === "pv_only"
-        ? "pv"
-        : "battery_pv",
+      const current = counterSnap.exists
+        ? (counterSnap.data()?.requests || 0)
+        : 0;
 
-  battery_count: Number(simulation.battery_count) || 0,
-  panel_count: Number(simulation.pricing_breakdown?.pv_panels) || 0,
+      const next = current + 1;
 
-  amount: Number(simulation.invest_ttc) || 0,
-},
+      // 🔢 update compteur
+      tx.set(counterRef, { requests: next }, { merge: true });
 
-      payment_status: "pending",
+      // 🆕 création request AVEC count
+      const requestRef = firestore.collection("requests").doc();
+
+      tx.set(requestRef, {
+        created_at: new Date(),
+        request_number: next,
+
+        address: {
+          street: client.street,
+          number: client.street_number || "",
+          city: client.city,
+          zipcode: client.zip,
+        },
+
+        client: {
+          firstName: client.firstname,
+          lastName: client.lastname,
+          phone: client.phone,
+        },
+
+        work: {
+          type:
+            simulation.installation_option === "battery_only"
+              ? "battery"
+              : simulation.installation_option === "pv_only"
+                ? "pv"
+                : "battery_pv",
+
+          battery_count: Number(simulation.battery_count) || 0,
+          panel_count: Number(simulation.pricing_breakdown?.pv_panels) || 0,
+          amount: Number(simulation.invest_ttc) || 0,
+        },
+
+        payment_status: "pending",
+        source: "simulateur_ui",
+      });
     }),
 
     new Promise((_, reject) =>
       setTimeout(() => reject(new Error("Firestore timeout")), 2000)
     )
+
   ]);
 
-  console.log("🔥 Firestore write OK");
+  console.log("🔥 Firestore write + count OK");
 
 } catch (err) {
   console.error("❌ Firestore skipped:", err.message);
