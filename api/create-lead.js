@@ -326,9 +326,12 @@ try {
         phone: client.phone,
       },
 
-      work: {
-        type: "battery",
-      },
+     work: {
+  type: "battery" | "pv" | "battery_pv",
+
+  battery_count: number,   // 0 si pas de batterie
+  panel_count: number,     // 0 si pas de panneaux
+}
 
       payment_status: "pending",
     }),
