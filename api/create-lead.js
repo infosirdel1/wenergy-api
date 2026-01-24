@@ -1,13 +1,15 @@
 import axios from "axios";
 import admin from "firebase-admin";
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(
-      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-    ),
-  });
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+  throw new Error("FIREBASE_SERVICE_ACCOUNT is missing");
 }
+
+admin.initializeApp({
+  credential: admin.credential.cert(
+    JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+  ),
+});
 
 const firestore = admin.firestore();
 
