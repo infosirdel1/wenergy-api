@@ -308,42 +308,54 @@ const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 // ---------------------------------------------
 // 10) WRITE FIRESTORE (SAFE SERVERLESS)
 // ---------------------------------------------
-firestore.collection("requests").add({
-  created_at: new Date(),
+try {
+  await Promise.race([
+    firestore.collection("requests").add({
+      created_at: new Date(),
 
-  // ✅ SCHÉMA PLATEFORME (OBLIGATOIRE)
-  address: {
-    street: client.street,
-    number: client.street_number,
-    city: client.city,
-    zipcode: client.zip,
-  },
+      address: {
+        street: client.street,
+        number: client.street_number,
+        city: client.city,
+        zipcode: client.zip,
+      },
 
-  client: {
-    firstName: client.firstname,
-    lastName: client.lastname,
-    phone: client.phone,
-  },
+      client: {
+        firstName: client.firstname,
+        lastName: client.lastname,
+        phone: client.phone,
+      },
 
-  work: {
-    type: "battery",
-    amount: simulation.invest_ttc,
-  },
+      work: {
+        type: "battery",
+        amount: simulation.invest_ttc,
+      },
 
-  payment_status: "pending",
+      payment_status: "pending",
 
-  // ✅ DONNÉES SIMULATEUR (BONUS, NON BLOQUANT)
-  simulation,
-  order_products,
-  odoo: {
-    lead_id: leadId,
-    partner_id: partnerId,
-    quotation_id: quotationId,
-    portal_url,
-  },
+      simulation,
+      order_products,
 
-  source: "simulateur_ui",
-});
+      odoo: {
+        lead_id: leadId,
+        partner_id: partnerId,
+        quotation_id: quotationId,
+        portal_url,
+      },
+
+      source: "simulateur_ui",
+    }),
+
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Firestore timeout")), 2000)
+    )
+  ]);
+
+  console.log("🔥 Firestore write OK");
+
+} catch (err) {
+  console.error("❌ Firestore skipped:", err.message);
+}
 
     
     // ---------------------------------------------
