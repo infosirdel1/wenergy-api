@@ -315,9 +315,33 @@ console.log("DEBUG PORTAL_URL RAW ===>", portalResp.data.result);
 const raw = portalResp.data.result;
 const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 
+
+// ---------------------------------------------
+// 10) SOURCE PRODUITS (order_products)
+// ---------------------------------------------
+let batteryCount = 0;
+let panelCount = 0;
+
+for (const p of order_products || []) {
+  const qty = Number(p.quantity) || 0;
+
+  // 🔋 batteries
+  if (p.type === "battery") {
+    batteryCount += qty;
+  }
+
+  // ☀️ panneaux
+  if (p.type === "panel") {
+    panelCount += qty;
+  }
+}
+
+console.log("[FS STEP1] batteryCount from products =", batteryCount);
+console.log("[FS STEP1] panelCount from products   =", panelCount);
+
     
 // ---------------------------------------------
-// 10) WRITE FIRESTORE + COUNT (SAFE SERVERLESS)
+// 11) WRITE FIRESTORE + COUNT (SAFE SERVERLESS)
 // ---------------------------------------------
 try {
   await Promise.race([
@@ -337,17 +361,6 @@ try {
 
       // 🔢 update compteur
       tx.set(counterRef, { requests: next }, { merge: true });
-
-      // ===== DÉDUCTION MÉTIER : COUNTS (fallbacks fiables) =====
-      const batteryCount =
-        Number(simulation.battery_count) ||
-        Number(simulation.pricing_breakdown?.battery_count) ||
-        0;
-
-      const panelCount =
-        Number(simulation.panel_count) ||
-        Number(simulation.pricing_breakdown?.pv_panels) ||
-        0;
 
       // ===== TYPE (plateforme: pv OU battery uniquement) =====
       const workType =
@@ -409,9 +422,8 @@ try {
 }
 
 
-    
     // ---------------------------------------------
-    // 11) RÉPONSE → SIMULATEUR
+    // 12) RÉPONSE → SIMULATEUR
     // ---------------------------------------------
     return res.status(200).json({
       status: "success",
