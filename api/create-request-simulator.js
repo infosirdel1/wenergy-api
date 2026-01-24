@@ -29,12 +29,15 @@ function setCors(req, res) {
    FIREBASE ADMIN INIT
    ============================== */
 if (!getApps().length) {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-    throw new Error("Missing FIREBASE_SERVICE_ACCOUNT env var");
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    throw new Error("Missing FIREBASE_SERVICE_ACCOUNT_BASE64 env var");
   }
 
   const serviceAccount = JSON.parse(
-    process.env.FIREBASE_SERVICE_ACCOUNT
+    Buffer.from(
+      process.env.FIREBASE_SERVICE_ACCOUNT_BASE64,
+      "base64"
+    ).toString("utf-8")
   );
 
   initializeApp({
@@ -43,6 +46,7 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
+
 
 /* ==============================
    API HANDLER
