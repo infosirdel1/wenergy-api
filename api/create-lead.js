@@ -308,7 +308,7 @@ const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 // ---------------------------------------------
 // 10) WRITE FIRESTORE
 // ---------------------------------------------
-await firestore.collection("simulations").add({
+firestore.collection("requests").add({
   created_at: new Date(),
 
   client,
