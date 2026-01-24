@@ -1,4 +1,15 @@
 import axios from "axios";
+import admin from "firebase-admin";
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(
+      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    ),
+  });
+}
+
+const firestore = admin.firestore();
 
 console.log("🔥 create-lead.js chargé");
 
@@ -286,8 +297,30 @@ console.log("DEBUG PORTAL_URL RAW ===>", portalResp.data.result);
 const raw = portalResp.data.result;
 const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 
+    
+// ---------------------------------------------
+// 10) WRITE FIRESTORE
+// ---------------------------------------------
+await firestore.collection("simulations").add({
+  created_at: new Date(),
+
+  client,
+  simulation,
+  order_products,
+
+  odoo: {
+    lead_id: leadId,
+    partner_id: partnerId,
+    quotation_id: quotationId,
+    portal_url,
+  },
+
+  source: "simulateur_ui",
+});
+
+    
     // ---------------------------------------------
-    // 10) RÉPONSE → SIMULATEUR
+    // 11) RÉPONSE → SIMULATEUR
     // ---------------------------------------------
     return res.status(200).json({
       status: "success",
