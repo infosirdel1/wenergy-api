@@ -354,7 +354,10 @@ try {
     : "battery", // battery_only ET battery+pv
 
           battery_count: Number(simulation.battery_count) || 0,
-          panel_count: Number(simulation.pricing_breakdown?.pv_panels) || 0,
+          panel_count:
+  Number(simulation.panel_count)
+  || Number(simulation.pricing_breakdown?.pv_panels)
+  || 0,
         
         },
 
