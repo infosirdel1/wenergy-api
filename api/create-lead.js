@@ -313,56 +313,64 @@ try {
 
     firestore.runTransaction(async (tx) => {
 
+      // ===== COMPTEUR GLOBAL =====
       const counterRef = firestore.collection("meta").doc("counters");
       const counterSnap = await tx.get(counterRef);
 
-      const current = counterSnap.exists
-        ? (counterSnap.data()?.requests || 0)
-        : 0;
+      const current =
+        counterSnap.exists && Number.isFinite(counterSnap.data()?.requests)
+          ? counterSnap.data().requests
+          : 0;
 
       const next = current + 1;
 
-      // 🔢 update compteur global
+      // 🔢 update compteur
       tx.set(counterRef, { requests: next }, { merge: true });
 
-      // 🆕 création request AVEC count préfixé simulateur
+      // ===== DÉDUCTION MÉTIER (FIABLE) =====
+      const batteryCount = Number(simulation.battery_count || 0);
+      const panelCount =
+        Number(simulation.panel_count) ||
+        Number(simulation.pricing_breakdown?.pv_panels) ||
+        0;
+
+      let workType = "battery";
+      if (batteryCount > 0 && panelCount > 0) {
+        workType = "battery_pv";
+      } else if (panelCount > 0) {
+        workType = "pv";
+      }
+
+      // ===== CRÉATION REQUEST =====
       const requestRef = firestore.collection("requests").doc();
 
       tx.set(requestRef, {
         created_at: new Date(),
 
-        // ✅ COUNT UNIQUE + SOURCE CLAIRE
-        request_number: `S-${next.toString().padStart(6, "0")}`,
+        // ✅ NUMÉRO UNIQUE + ORIGINE
+        request_number: `S-${String(next).padStart(6, "0")}`,
+        source: "simulateur_ui",
 
         address: {
-          street: client.street,
+          street: client.street || "",
           number: client.street_number || "",
-          city: client.city,
-          zipcode: client.zip,
+          city: client.city || "",
+          zipcode: client.zip || "",
         },
 
         client: {
-          firstName: client.firstname,
-          lastName: client.lastname,
-          phone: client.phone,
+          firstName: client.firstname || "",
+          lastName: client.lastname || "",
+          phone: client.phone || "",
         },
 
         work: {
-          type:
-  simulation.installation_option === "pv_only"
-    ? "pv"
-    : "battery", // battery_only ET battery+pv
-
-          battery_count: Number(simulation.battery_count) || 0,
-          panel_count:
-  Number(simulation.panel_count)
-  || Number(simulation.pricing_breakdown?.pv_panels)
-  || 0,
-        
+          type: workType,
+          battery_count: batteryCount,
+          panel_count: panelCount,
         },
 
         payment_status: "pending",
-        source: "simulateur_ui",
       });
     }),
 
@@ -378,6 +386,7 @@ try {
 } catch (err) {
   console.error("❌ Firestore skipped:", err.message);
 }
+
     
     // ---------------------------------------------
     // 11) RÉPONSE → SIMULATEUR
