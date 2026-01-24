@@ -317,27 +317,29 @@ const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 
 
 // ---------------------------------------------
-// 10) SOURCE PRODUITS (order_products)
+// 10) SOURCE PRODUITS (order_products) — MAPPING ODOO
 // ---------------------------------------------
 let batteryCount = 0;
 let panelCount = 0;
 
 for (const p of order_products || []) {
   const qty = Number(p.quantity) || 0;
+  const pid = Number(p.odoo_product_id);
 
-  // 🔋 batteries
-  if (p.type === "battery") {
+  // 🔋 Batteries (IDs 4 et 5)
+  if (pid === 4 || pid === 5) {
     batteryCount += qty;
   }
 
-  // ☀️ panneaux
-  if (p.type === "panel") {
+  // ☀️ Panneaux (ID 16)
+  if (pid === 16) {
     panelCount += qty;
   }
 }
 
-console.log("[FS STEP1] batteryCount from products =", batteryCount);
-console.log("[FS STEP1] panelCount from products   =", panelCount);
+console.log("[FS FINAL] batteryCount =", batteryCount);
+console.log("[FS FINAL] panelCount   =", panelCount);
+
 
     
 // ---------------------------------------------
