@@ -322,15 +322,17 @@ try {
 
       const next = current + 1;
 
-      // 🔢 update compteur
+      // 🔢 update compteur global
       tx.set(counterRef, { requests: next }, { merge: true });
 
-      // 🆕 création request AVEC count
+      // 🆕 création request AVEC count préfixé simulateur
       const requestRef = firestore.collection("requests").doc();
 
       tx.set(requestRef, {
         created_at: new Date(),
-        request_number: next,
+
+        // ✅ COUNT UNIQUE + SOURCE CLAIRE
+        request_number: `S-${next.toString().padStart(6, "0")}`,
 
         address: {
           street: client.street,
@@ -363,6 +365,7 @@ try {
       });
     }),
 
+    // ⏱️ garde serverless
     new Promise((_, reject) =>
       setTimeout(() => reject(new Error("Firestore timeout")), 2000)
     )
@@ -374,7 +377,6 @@ try {
 } catch (err) {
   console.error("❌ Firestore skipped:", err.message);
 }
-
     
     // ---------------------------------------------
     // 11) RÉPONSE → SIMULATEUR
