@@ -306,30 +306,37 @@ const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 
     
 // ---------------------------------------------
-// 10) WRITE FIRESTORE
+// 10) WRITE FIRESTORE (SAFE SERVERLESS)
 // ---------------------------------------------
-firestore.collection("requests").add({
-  created_at: new Date(),
+try {
+  await Promise.race([
+    firestore.collection("requests").add({
+      created_at: new Date(),
 
-  client,
-  simulation,
-  order_products,
+      client,
+      simulation,
+      order_products,
 
-  odoo: {
-    lead_id: leadId,
-    partner_id: partnerId,
-    quotation_id: quotationId,
-    portal_url,
-  },
+      odoo: {
+        lead_id: leadId,
+        partner_id: partnerId,
+        quotation_id: quotationId,
+        portal_url,
+      },
 
-  source: "simulateur_ui",
-})
-.then(() => {
+      source: "simulateur_ui",
+    }),
+
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Firestore timeout")), 2000)
+    )
+  ]);
+
   console.log("🔥 Firestore write OK");
-})
-.catch((err) => {
-  console.error("❌ Firestore write failed", err);
-});
+
+} catch (err) {
+  console.error("❌ Firestore skipped:", err.message);
+}
 
     
     // ---------------------------------------------
