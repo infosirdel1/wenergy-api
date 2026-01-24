@@ -336,13 +336,6 @@ try {
       simulation,
       order_products,
 
-      odoo: {
-        lead_id: leadId,
-        partner_id: partnerId,
-        quotation_id: quotationId,
-        portal_url,
-      },
-
       source: "simulateur_ui",
     }),
 
