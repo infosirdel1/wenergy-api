@@ -4,7 +4,7 @@ import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 // ==============================
-// CORS (Odoo -> Vercel)
+// CORS (Odoo / Website -> Vercel)
 // ==============================
 const ALLOWED_ORIGINS = [
   "https://wenergy1.odoo.com",
@@ -17,8 +17,6 @@ function setCors(req, res) {
 
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
-  } else if (origin) {
-    return res.status(403).json({ error: "origin_not_allowed" });
   }
 
   res.setHeader("Vary", "Origin");
@@ -30,7 +28,6 @@ function setCors(req, res) {
   res.setHeader("Content-Type", "application/json");
 }
 
-
 // ==============================
 // INIT FIREBASE ADMIN (1 seule fois)
 // ==============================
@@ -38,8 +35,13 @@ if (!getApps().length) {
   if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
     throw new Error("Missing FIREBASE_SERVICE_ACCOUNT env var");
   }
+
   initializeApp({
-    credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
+    credential: cert(
+      JSON.parse(
+        process.env.FIREBASE_SERVICE_ACCOUNT.replace(/\\n/g, "\n")
+      )
+    ),
   });
 }
 
@@ -51,7 +53,7 @@ const db = getFirestore();
 export default async function handler(req, res) {
   setCors(req, res);
 
-  // ✅ PRE-FLIGHT CORS
+  // ✅ PRE-FLIGHT
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -76,7 +78,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "missing_fields" });
   }
 
+  // ==============================
+  // CALCUL MONTANT
+  // ==============================
   let amount = 0;
+
   if (installation_type === "battery") {
     amount = 150;
   } else if (installation_type === "pv") {
@@ -133,6 +139,7 @@ export default async function handler(req, res) {
       request_id: createdRequestId,
       request_number: nextNumber,
     });
+
   } catch (err) {
     console.error("[SIMU → FIRESTORE] error", err);
     return res.status(500).json({ error: "firestore_error" });
