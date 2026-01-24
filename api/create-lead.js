@@ -326,12 +326,19 @@ try {
         phone: client.phone,
       },
 
-     work: {
-  type: "battery" | "pv" | "battery_pv",
+  work: {
+  type:
+    simulation.installation_option === "battery_only"
+      ? "battery"
+      : simulation.installation_option === "pv_only"
+        ? "pv"
+        : "battery_pv",
 
-  battery_count: number,   // 0 si pas de batterie
-  panel_count: number,     // 0 si pas de panneaux
-}
+  battery_count: Number(simulation.battery_count) || 0,
+  panel_count: Number(simulation.pricing_breakdown?.pv_panels) || 0,
+
+  amount: Number(simulation.invest_ttc) || 0,
+},
 
       payment_status: "pending",
     }),
