@@ -349,11 +349,9 @@ try {
 
         work: {
           type:
-            simulation.installation_option === "battery_only"
-              ? "battery"
-              : simulation.installation_option === "pv_only"
-                ? "pv"
-                : "battery_pv",
+  simulation.installation_option === "pv_only"
+    ? "pv"
+    : "battery", // battery_only ET battery+pv
 
           battery_count: Number(simulation.battery_count) || 0,
           panel_count: Number(simulation.pricing_breakdown?.pv_panels) || 0,
