@@ -327,19 +327,29 @@ try {
       // 🔢 update compteur
       tx.set(counterRef, { requests: next }, { merge: true });
 
-      // ===== DÉDUCTION MÉTIER (FIABLE) =====
-      const batteryCount = Number(simulation.battery_count || 0);
+      // ===== DÉDUCTION MÉTIER : COUNTS (fallbacks fiables) =====
+      const batteryCount =
+        Number(simulation.battery_count) ||
+        Number(simulation.pricing_breakdown?.battery_count) ||
+        0;
+
       const panelCount =
         Number(simulation.panel_count) ||
         Number(simulation.pricing_breakdown?.pv_panels) ||
         0;
 
-      let workType = "battery";
-      if (batteryCount > 0 && panelCount > 0) {
-        workType = "battery_pv";
-      } else if (panelCount > 0) {
-        workType = "pv";
-      }
+      // ===== TYPE (plateforme: pv OU battery uniquement) =====
+      const workType =
+        panelCount > 0 && batteryCount <= 0
+          ? "pv"
+          : "battery"; // battery seul OU battery+pv
+
+      // ===== DEBUG (à garder 1 jour) =====
+      console.log("[FS] batteryCount =", batteryCount);
+      console.log("[FS] panelCount   =", panelCount);
+      console.log("[FS] workType     =", workType);
+      console.log("[FS] sim keys     =", Object.keys(simulation || {}));
+      console.log("[FS] pricing keys =", Object.keys(simulation?.pricing_breakdown || {}));
 
       // ===== CRÉATION REQUEST =====
       const requestRef = firestore.collection("requests").doc();
@@ -364,28 +374,19 @@ try {
           phone: client.phone || "",
         },
 
-       work: {
-  type:
-    simulation.installation_option === "pv_only"
-      ? "pv"
-      : "battery",
-
-  battery_count: Number(
-    simulation.pricing_breakdown?.battery_count
-  ) || 0,
-
-  panel_count: Number(
-    simulation.pricing_breakdown?.pv_panels
-  ) || 0,
-},
+        work: {
+          type: workType,
+          battery_count: batteryCount,
+          panel_count: panelCount,
+        },
 
         payment_status: "pending",
       });
     }),
 
-    // ⏱️ garde serverless
+    // ⏱️ garde serverless (2s = trop court en prod)
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Firestore timeout")), 2000)
+      setTimeout(() => reject(new Error("Firestore timeout")), 10000)
     )
 
   ]);
@@ -395,6 +396,7 @@ try {
 } catch (err) {
   console.error("❌ Firestore skipped:", err.message);
 }
+
 
     
     // ---------------------------------------------
