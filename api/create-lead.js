@@ -366,18 +366,16 @@ try {
       // 🔢 update compteur
       tx.set(counterRef, { requests: next }, { merge: true });
 
-      // ===== TYPE TRAVAUX (RÈGLE MÉTIER VALIDÉE) =====
-      const workType = panelCount > 0 ? "pv" : "battery";
-
       // ===== DEBUG =====
       console.log("[FS] batteryCount =", batteryCount);
       console.log("[FS] panelCount   =", panelCount);
-      console.log("[FS] workType     =", workType);
+      console.log("[FS] hasInstallation =", hasInstallation);
+      console.log("[FS] installationType =", installationType);
 
       // ===== CRÉATION REQUEST =====
       const requestRef = firestore.collection("requests").doc();
 
-      tx.set(requestRef, {
+      const requestData = {
         created_at: new Date(),
 
         // ✅ NUMÉRO UNIQUE + ORIGINE
@@ -397,16 +395,19 @@ try {
           phone: client.phone || "",
         },
 
-      if (hasInstallation) {
-  requestData.work = {
-    type: installationType, // "battery" | "pv"
-    battery_count: batteryCount,
-    panel_count: panelCount,
-  };
-}
-
         payment_status: "pending",
-      });
+      };
+
+      // ✅ INSTALLATION UNIQUEMENT SI AUTORISÉE
+      if (hasInstallation) {
+        requestData.work = {
+          type: installationType, // "battery" | "pv"
+          battery_count: batteryCount,
+          panel_count: panelCount,
+        };
+      }
+
+      tx.set(requestRef, requestData);
     }),
 
     // ⏱️ garde serverless
@@ -421,6 +422,7 @@ try {
 } catch (err) {
   console.error("❌ Firestore skipped:", err.message);
 }
+
 
 
     // ---------------------------------------------
