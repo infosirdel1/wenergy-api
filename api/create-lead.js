@@ -49,6 +49,8 @@ const body = req.body || {};
 
 const client         = body.client;
 const simulation     = body.simulation;
+const installationType = simulation?.installation_type;
+const hasInstallation  = installationType !== "none";
 const order_products = body.order_products;
 const test           = body.test;
 
@@ -395,11 +397,13 @@ try {
           phone: client.phone || "",
         },
 
-        work: {
-          type: workType,
-          battery_count: batteryCount,
-          panel_count: panelCount,
-        },
+      if (hasInstallation) {
+  requestData.work = {
+    type: installationType, // "battery" | "pv"
+    battery_count: batteryCount,
+    panel_count: panelCount,
+  };
+}
 
         payment_status: "pending",
       });
