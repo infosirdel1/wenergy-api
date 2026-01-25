@@ -351,94 +351,70 @@ console.log("[FS FINAL] panelCount   =", panelCount);
 // 11) WRITE FIRESTORE + COUNT (SAFE SERVERLESS)
 // ---------------------------------------------
 try {
-  await Promise.race([
+  await firestore.runTransaction(async (tx) => {
 
-    firestore.runTransaction(async (tx) => {
+    const counterRef = firestore.collection("meta").doc("counters");
+    const counterSnap = await tx.get(counterRef);
 
-      // ===== COMPTEUR GLOBAL =====
-      const counterRef = firestore.collection("meta").doc("counters");
-      const counterSnap = await tx.get(counterRef);
+    const current = counterSnap.exists ? counterSnap.data().requests || 0 : 0;
+    const next = current + 1;
 
-      const current =
-        counterSnap.exists && Number.isFinite(counterSnap.data()?.requests)
-          ? counterSnap.data().requests
-          : 0;
+    tx.set(counterRef, { requests: next }, { merge: true });
 
-      const next = current + 1;
+    const requestRef = firestore.collection("requests").doc();
 
-      // 🔢 update compteur
-      tx.set(counterRef, { requests: next }, { merge: true });
+    const requestData = {
+      created_at: new Date(),
+      request_number: `S-${String(next).padStart(6, "0")}`,
+      source: "simulateur_ui",
 
-      // ===== DEBUG =====
-      console.log("[FS] batteryCount =", batteryCount);
-      console.log("[FS] panelCount   =", panelCount);
-      console.log("[FS] hasInstallation =", hasInstallation);
-      console.log("[FS] installationTypeRaw =", installationTypeRaw);
+      address: {
+        street: client.street || "",
+        number: client.street_number || "",
+        city: client.city || "",
+        zipcode: client.zip || "",
+      },
 
-      // ===== CRÉATION REQUEST =====
-      const requestRef = firestore.collection("requests").doc();
+      client: {
+        firstName: client.firstname || "",
+        lastName: client.lastname || "",
+        phone: client.phone || "",
+      },
 
-      const requestData = {
-        created_at: new Date(),
+      payment_status: "pending",
+    };
 
-        // ✅ NUMÉRO UNIQUE + ORIGINE
-        request_number: `S-${String(next).padStart(6, "0")}`,
-        source: "simulateur_ui",
+    // ===== DÉTECTION INSTALLATION DEPUIS order_products =====
+    const hasInstallBattery = order_products.some(
+      p => Number(p.odoo_product_id) === INSTALL_BATTERY_ID
+    );
 
-        address: {
-          street: client.street || "",
-          number: client.street_number || "",
-          city: client.city || "",
-          zipcode: client.zip || "",
-        },
+    const hasInstallPV = order_products.some(
+      p => Number(p.odoo_product_id) === INSTALL_BATTERY_PV_ID
+    );
 
-        client: {
-          firstName: client.firstname || "",
-          lastName: client.lastname || "",
-          phone: client.phone || "",
-        },
-
-        payment_status: "pending",
+    if (hasInstallBattery || hasInstallPV) {
+      requestData.work = {
+        type: hasInstallPV ? "pv" : "battery",
+        battery_count: batteryCount,
+        panel_count: panelCount,
       };
+    }
 
-      // ✅ INSTALLATION UNIQUEMENT SI AUTORISÉE
-     let safeType = null;
+    tx.set(requestRef, requestData);
+  });
 
-if (installationTypeRaw === "battery_only") {
-  safeType = "battery";
-}
-
-if (installationTypeRaw === "battery_pv") {
-  safeType = "pv";
-}
-
-if (safeType) {
-  requestData.work = {
-    type: safeType,
-    battery_count: batteryCount,
-    panel_count: panelCount,
-  };
-}
-
-      tx.set(requestRef, requestData);
-    }),
-
-    // ⏱️ garde serverless
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Firestore timeout")), 10000)
-    )
-
-  ]);
-
-  console.log("🔥 Firestore write + count OK");
+  console.log("🔥 Firestore write OK");
 
 } catch (err) {
-  console.error("❌ Firestore skipped:", err.message);
+  console.error("❌ Firestore error:", err);
 }
+
 
     // ---------------------------------------------
     // 12) RÉPONSE → SIMULATEUR
     // ---------------------------------------------
+    
     return res.status(200).json({
       status: "success",
       lead_id: leadId,
