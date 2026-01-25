@@ -49,8 +49,8 @@ const body = req.body || {};
 
 const client         = body.client;
 const simulation     = body.simulation;
-const installationType = simulation?.installation_type;
-const hasInstallation  = installationType !== "none";
+const installationTypeRaw = String(simulation?.installation_type || "").toLowerCase().trim();
+const hasInstallation = installationTypeRaw !== "none";
 const order_products = body.order_products;
 const test           = body.test;
 
@@ -370,7 +370,7 @@ try {
       console.log("[FS] batteryCount =", batteryCount);
       console.log("[FS] panelCount   =", panelCount);
       console.log("[FS] hasInstallation =", hasInstallation);
-      console.log("[FS] installationType =", installationType);
+      console.log("[FS] installationTypeRaw =", installationTypeRaw);
 
       // ===== CRÉATION REQUEST =====
       const requestRef = firestore.collection("requests").doc();
@@ -400,8 +400,15 @@ try {
 
       // ✅ INSTALLATION UNIQUEMENT SI AUTORISÉE
       if (hasInstallation) {
+        const safeType =
+          installationTypeRaw === "pv"
+            ? "pv"
+            : installationTypeRaw === "battery"
+            ? "battery"
+            : (panelCount > 0 ? "pv" : "battery"); // fallback sûr
+
         requestData.work = {
-          type: installationType, // "battery" | "pv"
+          type: safeType,
           battery_count: batteryCount,
           panel_count: panelCount,
         };
@@ -422,8 +429,6 @@ try {
 } catch (err) {
   console.error("❌ Firestore skipped:", err.message);
 }
-
-
 
     // ---------------------------------------------
     // 12) RÉPONSE → SIMULATEUR
