@@ -346,25 +346,33 @@ console.log("[FS FINAL] batteryCount =", batteryCount);
 console.log("[FS FINAL] panelCount   =", panelCount);
 
 
-    
 // ---------------------------------------------
 // 11) WRITE FIRESTORE + COUNT (SAFE SERVERLESS)
 // ---------------------------------------------
-try {
+
+  try {
   await firestore.runTransaction(async (tx) => {
 
-    const counterRef = firestore.collection("meta").doc("counters");
+    // ===== COMPTEUR GLOBAL =====
+    const counterRef  = firestore.collection("meta").doc("counters");
     const counterSnap = await tx.get(counterRef);
 
-    const current = counterSnap.exists ? counterSnap.data().requests || 0 : 0;
+    const current =
+      counterSnap.exists && Number.isFinite(counterSnap.data()?.requests)
+        ? counterSnap.data().requests
+        : 0;
+
     const next = current + 1;
 
     tx.set(counterRef, { requests: next }, { merge: true });
 
+    // ===== REQUEST REF =====
     const requestRef = firestore.collection("requests").doc();
 
+    // ===== BASE REQUEST DATA =====
     const requestData = {
       created_at: new Date(),
+
       request_number: `S-${String(next).padStart(6, "0")}`,
       source: "simulateur_ui",
 
@@ -384,15 +392,28 @@ try {
       payment_status: "pending",
     };
 
-    // ===== DÉTECTION INSTALLATION DEPUIS order_products =====
-    const hasInstallBattery = order_products.some(
-      p => Number(p.odoo_product_id) === INSTALL_BATTERY_ID
+    // ===== INSTALLATION (SOURCE DE VÉRITÉ = order_products) =====
+    const INSTALL_BATTERY_ID = 26; // ✅ install batterie
+    const INSTALL_PV_ID      = 27; // ✅ install batterie + PV
+
+    const hasInstallBattery = (order_products || []).some(
+      p => Number(p?.odoo_product_id) === INSTALL_BATTERY_ID
     );
 
-    const hasInstallPV = order_products.some(
-      p => Number(p.odoo_product_id) === INSTALL_BATTERY_PV_ID
+    const hasInstallPV = (order_products || []).some(
+      p => Number(p?.odoo_product_id) === INSTALL_PV_ID
     );
 
+    // DEBUG (à garder 1 jour puis retirer)
+    console.log("[FS] hasInstallBattery =", hasInstallBattery);
+    console.log("[FS] hasInstallPV      =", hasInstallPV);
+    console.log("[FS] batteryCount      =", batteryCount);
+    console.log("[FS] panelCount        =", panelCount);
+
+    // ===== MAPPING MÉTIER PLATEFORME =====
+    // - aucune install -> pas de "work"
+    // - install batterie -> work.type="battery"
+    // - install PV -> work.type="pv"
     if (hasInstallBattery || hasInstallPV) {
       requestData.work = {
         type: hasInstallPV ? "pv" : "battery",
@@ -409,6 +430,7 @@ try {
 } catch (err) {
   console.error("❌ Firestore error:", err);
 }
+
 
 
     // ---------------------------------------------
