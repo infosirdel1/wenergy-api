@@ -50,7 +50,10 @@ const body = req.body || {};
 const client         = body.client;
 const simulation     = body.simulation;
 const installationTypeRaw = String(simulation?.installation_type || "").toLowerCase().trim();
-const hasInstallation = installationTypeRaw !== "none";
+const hasInstallation =
+  installationTypeRaw === "pv" ||
+  installationTypeRaw === "battery";
+
 const order_products = body.order_products;
 const test           = body.test;
 
