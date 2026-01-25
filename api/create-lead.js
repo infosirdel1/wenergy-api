@@ -402,20 +402,23 @@ try {
       };
 
       // ✅ INSTALLATION UNIQUEMENT SI AUTORISÉE
-      if (hasInstallation) {
-        const safeType =
-          installationTypeRaw === "pv"
-            ? "pv"
-            : installationTypeRaw === "battery"
-            ? "battery"
-            : (panelCount > 0 ? "pv" : "battery"); // fallback sûr
+     let safeType = null;
 
-        requestData.work = {
-          type: safeType,
-          battery_count: batteryCount,
-          panel_count: panelCount,
-        };
-      }
+if (installationTypeRaw === "battery_only") {
+  safeType = "battery";
+}
+
+if (installationTypeRaw === "battery_pv") {
+  safeType = "pv";
+}
+
+if (safeType) {
+  requestData.work = {
+    type: safeType,
+    battery_count: batteryCount,
+    panel_count: panelCount,
+  };
+}
 
       tx.set(requestRef, requestData);
     }),
