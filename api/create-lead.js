@@ -387,6 +387,7 @@ console.log("[FS FINAL] panelCount   =", panelCount);
         firstName: client.firstname || "",
         lastName: client.lastname || "",
         phone: client.phone || "",
+        email: client.email || "",
       },
 
       payment_status: "pending",
