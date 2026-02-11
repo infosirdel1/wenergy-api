@@ -1,6 +1,11 @@
 import axios from "axios";
 import admin from "firebase-admin";
 
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
   throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 is missing");
 }
@@ -530,6 +535,41 @@ await requestRef.set(
 );
 
 console.log("✅ Devis NON signé uploadé + Firestore OK", storagePath);
+
+  // ---------------------------------------------
+// 11c) ENVOI EMAIL CLIENT (DEVIS NON SIGNÉ)
+// ---------------------------------------------
+await resend.emails.send({
+  from: "Wenergy <noreply@wenergy-consulting.com>",
+  reply_to: "office@wenergy-consulting.com",
+  to: client.email,
+  subject: `Votre devis Wenergy – Référence ${requestNumber}`,
+  html: `
+    <p>Bonjour ${client.firstname},</p>
+
+    <p>Nous vous remercions pour votre demande auprès de Wenergy.</p>
+
+    <p>Vous trouverez en pièce jointe votre devis détaillé (non signé) relatif à votre simulation.</p>
+
+    <p>Pour accepter votre devis et finaliser votre commande, nous vous invitons à le consulter et à le signer en ligne via le lien sécurisé ci-dessous :</p>
+
+    <p><a href="${portal_url}">${portal_url}</a></p>
+
+    <p>Après signature, vous pourrez procéder au paiement sécurisé.</p>
+
+    <p>Une fois le paiement confirmé, vous recevrez automatiquement le devis signé, la facture ainsi que les documents annexes (conditions générales de vente, fiche de rétractation et fiche technique Marstek).</p>
+
+    <p>Si vous avez la moindre question, notre équipe reste à votre disposition.</p>
+
+    <p>Bien cordialement,<br>L’équipe Wenergy</p>
+  `,
+  attachments: [
+    {
+      filename: `devis-${quotationId}.pdf`,
+      content: pdfBuffer.toString("base64"),
+    },
+  ],
+});
 
 } catch (err) {
   console.error("❌ Firestore error:", err);
