@@ -1,5 +1,6 @@
 import axios from "axios";
 import admin from "firebase-admin";
+import { Resend } from "resend";
 
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
   throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 is missing");
@@ -561,6 +562,23 @@ console.log("✅ Devis NON signé uploadé + Firestore OK", storagePath);
   console.error("❌ Firestore error:", err);
 }
 
+// ---------------------------------------------
+// 11c) ENVOI EMAIL (Resend) — indépendant de request_number
+// ---------------------------------------------
+if (process.env.RESEND_API_KEY && client?.email) {
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: process.env.RESEND_FROM || "onboarding@resend.dev",
+      to: client.email,
+      subject: "Votre devis Wenergy",
+      html: `<p>Votre devis a été créé. Lien pour signer : <a href="${portal_url || ""}">${portal_url || "portail"}</a></p>`,
+    });
+    console.log("✅ Email envoyé à", client.email);
+  } catch (err) {
+    console.error("❌ Envoi email failed", err.message);
+  }
+}
 
     // ---------------------------------------------
     // 12) RÉPONSE → SIMULATEUR
