@@ -563,22 +563,40 @@ console.log("✅ Devis NON signé uploadé + Firestore OK", storagePath);
 }
 
 // ---------------------------------------------
-// 11c) ENVOI EMAIL (Resend) — indépendant de request_number
+// 11c) ENVOI EMAIL CLIENT (DEVIS NON SIGNÉ)
 // ---------------------------------------------
-if (process.env.RESEND_API_KEY && client?.email) {
-  try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
-      from: process.env.RESEND_FROM || "onboarding@resend.dev",
-      to: client.email,
-      subject: "Votre devis Wenergy",
-      html: `<p>Votre devis a été créé. Lien pour signer : <a href="${portal_url || ""}">${portal_url || "portail"}</a></p>`,
-    });
-    console.log("✅ Email envoyé à", client.email);
-  } catch (err) {
-    console.error("❌ Envoi email failed", err.message);
-  }
-}
+const resend = new Resend(process.env.RESEND_API_KEY);
+await resend.emails.send({
+  from: "Wenergy <noreply@wenergy-consulting.com>",
+  reply_to: "office@wenergy-consulting.com",
+  to: client.email,
+  subject: `Votre devis Wenergy – Référence ${odooOrderName}`,
+  html: `
+    <p>Bonjour ${client.firstname},</p>
+
+    <p>Nous vous remercions pour votre demande auprès de Wenergy.</p>
+
+    <p>Vous trouverez en pièce jointe votre devis détaillé (non signé) relatif à votre simulation.</p>
+
+    <p>Pour accepter votre devis et finaliser votre commande, nous vous invitons à le consulter et à le signer en ligne via le lien sécurisé ci-dessous :</p>
+
+    <p><a href="${portal_url}">${portal_url}</a></p>
+
+    <p>Après signature, vous pourrez procéder au paiement sécurisé.</p>
+
+    <p>Une fois le paiement confirmé, vous recevrez automatiquement le devis signé, la facture ainsi que les documents annexes (conditions générales de vente, fiche de rétractation et fiche technique Marstek).</p>
+
+    <p>Si vous avez la moindre question, notre équipe reste à votre disposition.</p>
+
+    <p>Bien cordialement,<br>L'équipe Wenergy</p>
+  `,
+  attachments: [
+    {
+      filename: `devis-${quotationId}.pdf`,
+      content: pdfBuffer.toString("base64"),
+    },
+  ],
+});
 
     // ---------------------------------------------
     // 12) RÉPONSE → SIMULATEUR
