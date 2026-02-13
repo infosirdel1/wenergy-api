@@ -99,7 +99,6 @@ if (!client || !simulation || !Array.isArray(order_products)) {
 // 2b) RÉSERVATION DU COUNT (AVANT ODOO)
 // ---------------------------------------------
 let count;
-let requestNumber;
 let flowStep = "reserve_count";
 
 try {
@@ -117,8 +116,7 @@ try {
     tx.set(counterRef, { requests: count }, { merge: true });
   });
 
-  requestNumber = `S-${String(count).padStart(6, "0")}`;
-  console.log("✅ COUNT RESERVED", count, requestNumber);
+  console.log("✅ COUNT RESERVED", count);
 
 } catch (err) {
   console.error("❌ COUNT RESERVATION FAILED", err);
@@ -378,6 +376,34 @@ console.log("DEBUG PORTAL_URL RAW ===>", portalResp.data.result);
 const raw = portalResp.data.result;
 const portal_url = raw ? `${ODOO_URL}${raw}` : null;
 
+// ---------------------------------------------
+// 9b) LECTURE DU NOM OFFICIEL DEVIS (sale.order.name) POUR request_number
+// ---------------------------------------------
+let odooOrderName = "";
+try {
+  const nameResp = await axios.post(
+    `${ODOO_URL}/web/dataset/call_kw`,
+    {
+      jsonrpc: "2.0",
+      method: "call",
+      params: {
+        model: "sale.order",
+        method: "read",
+        args: [[quotationId]],
+        kwargs: { fields: ["name"] },
+      },
+      id: Date.now(),
+    },
+    { headers: { Cookie: cookieHeader } }
+  );
+  const nameResult = nameResp.data?.result;
+  if (Array.isArray(nameResult) && nameResult.length > 0 && nameResult[0].name) {
+    odooOrderName = String(nameResult[0].name);
+    console.log("✅ sale.order.name (request_number officiel)", odooOrderName);
+  }
+} catch (err) {
+  console.error("❌ sale.order read (name) failed — request_number non renseigné depuis Odoo", err.message);
+}
 
 // ---------------------------------------------
 // 10) SOURCE PRODUITS (order_products) — MAPPING ODOO
@@ -419,7 +445,7 @@ try {
       created_at: new Date(),
 
       platform_count: count,
-      request_number: requestNumber,
+      ...(odooOrderName ? { request_number: odooOrderName } : {}),
       quotation_id: quotationId,
 
       source: "simulateur_ui",
@@ -556,12 +582,5 @@ console.log("✅ Devis NON signé uploadé + Firestore OK", storagePath);
     });
   }
 }
-
-
-
-
-
-
-
 
 
