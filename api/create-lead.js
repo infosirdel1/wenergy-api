@@ -527,41 +527,6 @@ const pdfResp2 = await axios.get(
 
 const pdfBuffer = Buffer.from(pdfResp2.data);
 
-// 2) Upload Storage
-const storagePath = `requests/${count}/devis-unsigned-${quotationId}.pdf`;
-const file = bucket.file(storagePath);
-
-await file.save(pdfBuffer, {
-  contentType: "application/pdf",
-  resumable: false,
-});
-
-// 3) Signed URL (optionnel mais utile pour vérifier tout de suite)
-const [signedUrl] = await file.getSignedUrl({
-  action: "read",
-  expires: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 jours
-});
-
-// 4) Écrire dans la request Firestore
-await requestRef.set(
-  {
-    pdfs: {
-      devis_unsigned: {
-        created_at: new Date(),
-        storage_path: storagePath,
-        signed_url: signedUrl,
-      },
-    },
-  },
-  { merge: true }
-);
-
-console.log("✅ Devis NON signé uploadé + Firestore OK", storagePath);
-
-} catch (err) {
-  console.error("❌ Firestore error:", err);
-}
-
 // ---------------------------------------------
 // 11c) ENVOI EMAIL CLIENT (DEVIS NON SIGNÉ)
 // ---------------------------------------------
@@ -597,6 +562,41 @@ await resend.emails.send({
     },
   ],
 });
+
+// 2) Upload Storage
+const storagePath = `requests/${count}/devis-unsigned-${quotationId}.pdf`;
+const file = bucket.file(storagePath);
+
+await file.save(pdfBuffer, {
+  contentType: "application/pdf",
+  resumable: false,
+});
+
+// 3) Signed URL (optionnel mais utile pour vérifier tout de suite)
+const [signedUrl] = await file.getSignedUrl({
+  action: "read",
+  expires: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 jours
+});
+
+// 4) Écrire dans la request Firestore
+await requestRef.set(
+  {
+    pdfs: {
+      devis_unsigned: {
+        created_at: new Date(),
+        storage_path: storagePath,
+        signed_url: signedUrl,
+      },
+    },
+  },
+  { merge: true }
+);
+
+console.log("✅ Devis NON signé uploadé + Firestore OK", storagePath);
+
+} catch (err) {
+  console.error("❌ Firestore error:", err);
+}
 
     // ---------------------------------------------
     // 12) RÉPONSE → SIMULATEUR
