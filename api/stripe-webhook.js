@@ -409,10 +409,15 @@ export default async function handler(req, res) {
               .file("Document mails type/Logo Wenergy.png")
               .download();
 
-            docPdf.image(logoBuffer, 100, 150, {
-              width: 400,
-              opacity: 0.07
+            docPdf.save();
+            docPdf.opacity(0.05);
+
+            docPdf.image(logoBuffer, 90, 250, {
+              width: 420
             });
+
+            docPdf.opacity(1);
+            docPdf.restore();
 
           } catch (err) {
             console.error("Logo watermark failed", err.message);
@@ -484,28 +489,19 @@ export default async function handler(req, res) {
           // QR CODE SECTION
           // ===============================
 
-          docPdf.moveDown(4); // descend bien plus bas
+          docPdf.moveDown(1); // descend bien plus bas
 
           // Texte grand + interligne large
-          docPdf.fontSize(16)
-            .font("Helvetica-Bold")
-            .text("Scanner le QR code à l'expédition", {
-              align: "left",
-              lineGap: 8
-            });
-
-          docPdf.moveDown(1);
-
-          docPdf.fontSize(16)
-            .font("Helvetica-Bold")
-            .text("Scanner le QR code à la réception", {
-              align: "left",
-              lineGap: 8
-            });
-
-          docPdf.moveDown(2);
-
           const qrSectionY = docPdf.y;
+          docPdf.font("Helvetica-Bold").fontSize(16).fillColor("black");
+          docPdf.text("Scanner le QR code à l'expédition", margin, qrSectionY, {
+            width: 300
+          });
+          docPdf.moveDown(0.4);
+          docPdf.text("Scanner le QR code à la réception", margin, docPdf.y, {
+            width: 300
+          });
+          docPdf.moveDown(0.8);
           const qrSize = 150;
           const qrX = margin + contentWidth - qrSize;
           const qrY = qrSectionY;
