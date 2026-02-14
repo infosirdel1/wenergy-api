@@ -282,44 +282,16 @@ export default async function handler(req, res) {
     }
 
     // ===============================
-    // FETCH PAID INVOICE FROM ODOO
+    // WAIT FOR POSTED INVOICE (max 30s)
     // ===============================
 
     let invoiceId = null;
     let invoicePdfBuffer = null;
 
-    try {
-      const invoiceResp = await axios.post(
-        `${ODOO_URL}/web/dataset/call_kw`,
-        {
-          jsonrpc: "2.0",
-          method: "call",
-          params: {
-            model: "account.move",
-            method: "search_read",
-            args: [[
-              ["invoice_origin", "=", saleOrderName],
-              ["move_type", "=", "out_invoice"],
-              ["state", "=", "posted"],
-              ["payment_state", "=", "paid"]
-            ]],
-            kwargs: { limit: 1, fields: ["id"] },
-          },
-          id: Date.now(),
-        },
-        { headers: { Cookie: cookieHeader } }
-      );
+    for (let attempt = 1; attempt <= 6; attempt++) {
 
-      const invoices = invoiceResp.data?.result;
-      if (Array.isArray(invoices) && invoices.length > 0) {
-        invoiceId = invoices[0].id;
-        console.log("invoice: paid invoice found id=%s", invoiceId);
-      } else {
-        console.log("invoice: no paid invoice found, retrying in 5s");
-
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        const retryResp = await axios.post(
+      try {
+        const invoiceResp = await axios.post(
           `${ODOO_URL}/web/dataset/call_kw`,
           {
             jsonrpc: "2.0",
@@ -330,8 +302,7 @@ export default async function handler(req, res) {
               args: [[
                 ["invoice_origin", "=", saleOrderName],
                 ["move_type", "=", "out_invoice"],
-                ["state", "=", "posted"],
-                ["payment_state", "=", "paid"]
+                ["state", "=", "posted"]
               ]],
               kwargs: { limit: 1, fields: ["id"] },
             },
@@ -340,17 +311,23 @@ export default async function handler(req, res) {
           { headers: { Cookie: cookieHeader } }
         );
 
-        const retryInvoices = retryResp.data?.result;
+        const invoices = invoiceResp.data?.result;
 
-        if (Array.isArray(retryInvoices) && retryInvoices.length > 0) {
-          invoiceId = retryInvoices[0].id;
-          console.log("invoice: paid invoice found after retry id=%s", invoiceId);
-        } else {
-          console.log("invoice: still no paid invoice after retry");
+        if (Array.isArray(invoices) && invoices.length > 0) {
+          invoiceId = invoices[0].id;
+          console.log("invoice: found on attempt %s id=%s", attempt, invoiceId);
+          break;
         }
+
+        console.log("invoice: not found attempt %s/6", attempt);
+
+      } catch (err) {
+        console.error("invoice search failed attempt %s", attempt, err.message);
       }
-    } catch (err) {
-      console.error("invoice search failed", err.message);
+
+      if (attempt < 6) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
     }
 
     if (invoiceId) {
@@ -369,6 +346,8 @@ export default async function handler(req, res) {
       } catch (err) {
         console.error("invoice PDF fetch failed", err.message);
       }
+    } else {
+      console.log("invoice: not found after 30s, abort email");
     }
 
     try {
@@ -425,6 +404,11 @@ export default async function handler(req, res) {
         }
 
         console.log("email: attachments ready");
+
+        if (!invoicePdfBuffer) {
+          console.log("email aborted: invoice missing");
+          return res.status(200).json({ received: true });
+        }
 
         await resend.emails.send({
           from: "Wenergy <noreply@wenergy-consulting.com>",
