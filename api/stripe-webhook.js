@@ -9,6 +9,9 @@ export const config = {
 import Stripe from "stripe";
 import axios from "axios";
 import admin from "firebase-admin";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 function getRawBody(req) {
   return new Promise((resolve, reject) => {
@@ -297,6 +300,49 @@ export default async function handler(req, res) {
       console.log("signed invoice: PDF uploaded to %s", signedStoragePath);
       await doc.ref.update({ signedInvoiceStored: true });
       console.log("signed invoice: Firestore updated signedInvoiceStored=true");
+
+      try {
+        console.log("email: preparing attachments");
+
+        const bucket = admin.storage().bucket();
+
+        const filesToAttach = [
+          `invoices/${count}_signed.pdf`,
+          `Document mails type/Conditions_Generales_Wenergy_INTEGRAL_FR_NL_EN.pdf`,
+          `Document mails type/formulaire_retractation_wenergy_v2.pdf`,
+          `Document mails type/wenergy_datasheet_marstek_C_E.pdf`,
+        ];
+
+        const attachments = [];
+
+        for (const path of filesToAttach) {
+          const [fileBuffer] = await bucket.file(path).download();
+          attachments.push({
+            filename: path.split("/").pop(),
+            content: fileBuffer.toString("base64"),
+          });
+        }
+
+        console.log("email: attachments ready");
+
+        await resend.emails.send({
+          from: "Wenergy <contact@wenergy.be>",
+          to: email,
+          subject: `Votre commande Wenergy – ${data.quotation_number || ""}`,
+          html: `
+      <p>Bonjour,</p>
+      <p>Votre paiement a bien été confirmé.</p>
+      <p>Veuillez trouver en pièce jointe votre devis signé ainsi que les documents contractuels.</p>
+      <p>L'équipe Wenergy</p>
+    `,
+          attachments,
+        });
+
+        console.log("email: sent successfully");
+
+      } catch (err) {
+        console.error("email: failed", err.message);
+      }
     } catch (err) {
       console.error("signed invoice: failed", err.message);
     }
