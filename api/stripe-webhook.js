@@ -331,7 +331,6 @@ export default async function handler(req, res) {
           to: email,
           subject: `Votre commande Wenergy – ${data.quotation_number || ""}`,
           html: `
-     html: `
   <p>Bonjour,</p>
 
   <p>Nous vous remercions pour votre commande auprès de Wenergy.</p>
