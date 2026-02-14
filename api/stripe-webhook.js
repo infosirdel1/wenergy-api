@@ -317,10 +317,11 @@ export default async function handler(req, res) {
 
         for (const path of filesToAttach) {
           const [fileBuffer] = await bucket.file(path).download();
-          attachments.push({
-            filename: path.split("/").pop(),
-            content: fileBuffer.toString("base64"),
-          });
+         attachments.push({
+  filename: path.split("/").pop(),
+  content: fileBuffer.toString("base64"),
+  encoding: "base64",
+});
         }
 
         console.log("email: attachments ready");
