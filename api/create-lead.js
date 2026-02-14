@@ -311,6 +311,8 @@ const productsToCreate = test === true
   ? [{ odoo_product_id: PRODUCT_ID_TEST, quantity: 1, unit_price_ht: 0.5 }]
   : order_products;
 
+const requestRef = firestore.collection("requests").doc();
+
 for (const item of productsToCreate) {
 
   const productId = Number(item.odoo_product_id);
@@ -350,6 +352,40 @@ for (const item of productsToCreate) {
     },
     { headers: { Cookie: cookieHeader } }
   );
+}
+
+// ===============================
+// FETCH REAL ODOO ORDER LINES (name + qty)
+// ===============================
+let supplierLines = [];
+try {
+  const linesResp = await axios.post(
+    `${ODOO_URL}/web/dataset/call_kw`,
+    {
+      jsonrpc: "2.0",
+      method: "call",
+      params: {
+        model: "sale.order.line",
+        method: "search_read",
+        args: [[["order_id", "=", quotationId]]],
+        kwargs: { fields: ["name", "product_uom_qty"] },
+      },
+      id: Date.now(),
+    },
+    { headers: { Cookie: cookieHeader } }
+  );
+
+  const lines = Array.isArray(linesResp.data?.result) ? linesResp.data.result : [];
+  supplierLines = lines
+    .map(l => ({
+      product_name: String(l?.name || ""),
+      quantity: Number(l?.product_uom_qty) || 0,
+    }))
+    .filter(x => x.product_name && x.quantity > 0);
+
+  console.log("✅ supplierLines fetched =", JSON.stringify(supplierLines, null, 2));
+} catch (err) {
+  console.error("❌ sale.order.line search_read failed", err.message);
 }
 
    // ---------------------------------------------
@@ -436,8 +472,6 @@ console.log("[FS FINAL] panelCount   =", panelCount);
 // ---------------------------------------------
 
 // ===== REQUEST REF (créé hors transaction pour garder l’ID) =====
-const requestRef = firestore.collection("requests").doc();
-
 try {
   await firestore.runTransaction(async (tx) => {
 
@@ -522,6 +556,24 @@ try {
   });
 
   console.log("🔥 Firestore write OK");
+
+  // ===============================
+  // WRITE SUPPLIER SNAPSHOT TO FIRESTORE
+  // ===============================
+  try {
+    await requestRef.set(
+      {
+        supplier_order_snapshot: {
+          created_at: new Date(),
+          lines: supplierLines,
+        },
+      },
+      { merge: true }
+    );
+    console.log("✅ Firestore supplier_order_snapshot updated");
+  } catch (err) {
+    console.error("❌ Firestore supplier snapshot update failed", err.message);
+  }
 
   // ---------------------------------------------
 // 11b) DEVIS PDF NON SIGNÉ → ODOO → STORAGE → FIRESTORE
