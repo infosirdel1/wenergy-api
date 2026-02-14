@@ -6,6 +6,7 @@
     "axios": "latest",
     "express": "latest",
     "firebase-admin": "^12.0.0",
-    "resend": "^6.9.2"
+    "resend": "^6.9.2",
+    "stripe": "^20.3.1"
   }
 }
