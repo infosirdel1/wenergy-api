@@ -220,6 +220,7 @@ export default async function handler(req, res) {
     console.log("signed invoice: odoo_order_id=%s count=%s email=%s", odoo_order_id, count, email);
 
     let saleOrderState;
+    let saleOrderName;
     try {
       const saleReadResp = await axios.post(
         `${ODOO_URL}/web/dataset/call_kw`,
@@ -230,7 +231,7 @@ export default async function handler(req, res) {
             model: "sale.order",
             method: "search_read",
             args: [[["id", "=", odoo_order_id]]],
-            kwargs: { limit: 1, fields: ["state"] },
+            kwargs: { limit: 1, fields: ["state", "name"] },
           },
           id: Date.now(),
         },
@@ -242,6 +243,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ received: true });
       }
       saleOrderState = saleList[0].state;
+      saleOrderName = saleList[0].name;
     } catch (err) {
       console.error("signed invoice: Odoo sale.order search_read failed", err.message);
       return res.status(200).json({ received: true });
@@ -296,7 +298,7 @@ export default async function handler(req, res) {
             model: "account.move",
             method: "search_read",
             args: [[
-              ["invoice_origin", "=", data.quotation_number],
+              ["invoice_origin", "=", saleOrderName],
               ["move_type", "=", "out_invoice"],
               ["state", "=", "posted"],
               ["payment_state", "=", "paid"]
