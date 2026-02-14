@@ -31,20 +31,151 @@ export default async function handler(req, res) {
     }
 
     const doc = snapshot.docs[0];
+    const data = doc.data();
 
+    // 🔹 Mise à jour livraison
     await doc.ref.update({
-  "delivery.status": "shipped",
-  "delivery.shipped_at": admin.firestore.FieldValue.serverTimestamp(),
-});
+      "delivery.status": "shipped",
+      "delivery.shipped_at": admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // 🔹 Données dynamiques
+    const requestNumber = data.request_number || "";
+    const platformCount = data.platform_count || "";
+
+    const firstName = data.client?.firstName || "";
+    const lastName = data.client?.lastName || "";
+
+    const street = data.address?.street || "";
+    const zipcode = data.address?.zipcode || "";
+    const city = data.address?.city || "";
 
     return res.status(200).send(`
-      <html>
-        <body style="font-family: Arial; text-align:center; margin-top:50px;">
-          <h1>✅ Commande marquée comme expédiée</h1>
-          <p>Référence : ${count}</p>
-        </body>
-      </html>
-    `);
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Expédition confirmée</title>
+
+<style>
+html, body { margin:0; padding:0; height:100%; }
+
+body {
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:#0f172a;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  position:relative;
+}
+
+.card {
+  background:white;
+  width:95%;
+  max-width:520px;
+  padding:60px 50px;
+  border-radius:20px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.45);
+  text-align:center;
+}
+
+.header { margin-bottom:45px; }
+
+svg { width:70px; margin-bottom:25px; }
+
+h1 { margin:0; font-size:30px; font-weight:700; color:#111; }
+
+.status {
+  color:#16a34a;
+  font-weight:700;
+  margin-top:12px;
+  font-size:19px;
+}
+
+.section {
+  margin-top:30px;
+  padding-top:25px;
+  border-top:1px solid #eee;
+  text-align:left;
+}
+
+.inline-row {
+  display:flex;
+  justify-content:space-between;
+  gap:30px;
+  margin-bottom:15px;
+}
+
+.block { flex:1; }
+
+.label { font-size:13px; color:#666; }
+
+.value {
+  font-size:17px;
+  font-weight:600;
+  color:#111;
+  margin-top:6px;
+}
+
+.footer {
+  margin-top:45px;
+  font-size:13px;
+  color:#777;
+  text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <div class="header">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#1E90FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="1" y="3" width="15" height="13"></rect>
+      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+      <circle cx="5.5" cy="18.5" r="2.5"></circle>
+      <circle cx="18.5" cy="18.5" r="2.5"></circle>
+    </svg>
+
+    <h1>Expédition confirmée</h1>
+    <div class="status">✔ Expédiée avec succès</div>
+  </div>
+
+  <div class="section">
+    <div class="inline-row">
+      <div class="block">
+        <div class="label">Commande</div>
+        <div class="value">${requestNumber}</div>
+      </div>
+      <div class="block">
+        <div class="label">Référence</div>
+        <div class="value">${platformCount}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">Client</div>
+    <div class="value">${firstName} ${lastName}</div>
+
+    <div class="label" style="margin-top:18px;">Adresse de livraison</div>
+    <div class="value">
+      ${street}<br>
+      ${zipcode} ${city}
+    </div>
+  </div>
+
+  <div class="footer">
+    Wenergy — Système logistique sécurisé
+  </div>
+
+</div>
+
+</body>
+</html>
+`);
 
   } catch (error) {
     console.error(error);
