@@ -11,6 +11,7 @@ import axios from "axios";
 import admin from "firebase-admin";
 import { Resend } from "resend";
 import crypto from "crypto";
+import PDFDocument from "pdfkit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -386,6 +387,80 @@ export default async function handler(req, res) {
             odoo_order_name: saleOrderName
           }
         });
+
+        // ===============================
+        // GENERATE SUPPLIER DELIVERY PDF
+        // ===============================
+
+        try {
+
+          const supplierData = data.supplier_order_snapshot || {};
+          const lines = Array.isArray(supplierData.lines) ? supplierData.lines : [];
+
+          const docPdf = new PDFDocument({ margin: 40 });
+          const chunks = [];
+
+          docPdf.on("data", chunk => chunks.push(chunk));
+
+          docPdf.fontSize(16).text("BON DE LIVRAISON FOURNISSEUR", { align: "center" });
+          docPdf.moveDown();
+
+          docPdf.fontSize(12).text(`Référence : ${data.request_number || ""}`);
+          docPdf.text(`Commande interne : ${data.platform_count || ""}`);
+          docPdf.moveDown();
+
+          docPdf.text("CLIENT :");
+          docPdf.text(`${data.client?.firstName || ""} ${data.client?.lastName || ""}`);
+          docPdf.text(`${data.address?.street || ""} ${data.address?.number || ""}`);
+          docPdf.text(`${data.address?.zipcode || ""} ${data.address?.city || ""}`);
+          docPdf.moveDown();
+
+          docPdf.text(`Préférence livraison : ${data.delivery_preference || ""}`);
+          docPdf.moveDown();
+
+          docPdf.text("PRODUITS :");
+          docPdf.moveDown(0.5);
+
+          lines.forEach(line => {
+            docPdf.text(`${line.product_name}  x${line.quantity}`);
+          });
+
+          docPdf.moveDown(2);
+
+          docPdf.rect(350, docPdf.y, 200, 120).stroke();
+          docPdf.text("QR CODE", 420, docPdf.y - 100);
+
+          const pdfBuffer = await new Promise((resolve) => {
+            docPdf.on("end", () => resolve(Buffer.concat(chunks)));
+            docPdf.end();
+          });
+
+          const supplierPath = `requests/${data.platform_count}/bon-livraison-fournisseur.pdf`;
+          const supplierFile = bucket.file(supplierPath);
+
+          await supplierFile.save(pdfBuffer, {
+            contentType: "application/pdf",
+            resumable: false,
+          });
+
+          const [supplierUrl] = await supplierFile.getSignedUrl({
+            action: "read",
+            expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
+          });
+
+          await doc.ref.update({
+            "pdfs.supplier_delivery_note": {
+              created_at: new Date(),
+              storage_path: supplierPath,
+              signed_url: supplierUrl,
+            }
+          });
+
+          console.log("✅ Supplier delivery PDF generated");
+
+        } catch (err) {
+          console.error("❌ Supplier PDF generation failed", err.message);
+        }
 
         console.log("delivery initialized");
 

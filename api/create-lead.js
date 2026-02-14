@@ -501,6 +501,8 @@ try {
 
       payment_status: "pending",
 
+      delivery_preference: client.delivery_pref || "",
+
       supplier_order_snapshot: {
         created_at: new Date(),
         lines: Array.isArray(req.body.lines)
