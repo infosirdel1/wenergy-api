@@ -327,7 +327,7 @@ export default async function handler(req, res) {
         console.log("email: attachments ready");
 
         await resend.emails.send({
-          from: "Wenergy <contact@wenergy.be>",
+          from: "Wenergy <noreply@wenergy-consulting.com>",
           to: email,
           subject: `Votre commande Wenergy – ${data.quotation_number || ""}`,
           html: `
