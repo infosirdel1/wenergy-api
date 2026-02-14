@@ -33,9 +33,9 @@ export default async function handler(req, res) {
     const doc = snapshot.docs[0];
 
     await doc.ref.update({
-      status: "shipped",
-      shipped_at: admin.firestore.FieldValue.serverTimestamp(),
-    });
+  "delivery.status": "shipped",
+  "delivery.shipped_at": admin.firestore.FieldValue.serverTimestamp(),
+});
 
     return res.status(200).send(`
       <html>
