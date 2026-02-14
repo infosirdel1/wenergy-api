@@ -343,6 +343,33 @@ export default async function handler(req, res) {
 
         invoicePdfBuffer = Buffer.from(invoicePdfResp.data);
         console.log("invoice PDF fetched");
+
+        // Upload invoice PDF to Storage
+        const invoiceStoragePath = `requests/${count}/facture-${invoiceId}.pdf`;
+        const invoiceFile = bucket.file(invoiceStoragePath);
+
+        await invoiceFile.save(invoicePdfBuffer, {
+          contentType: "application/pdf",
+          resumable: false,
+        });
+
+        const [invoiceSignedUrl] = await invoiceFile.getSignedUrl({
+          action: "read",
+          expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
+        });
+
+        // Update Firestore with invoice info
+        await doc.ref.update({
+          "pdfs.invoice": {
+            created_at: new Date(),
+            invoice_id: invoiceId,
+            storage_path: invoiceStoragePath,
+            signed_url: invoiceSignedUrl,
+          },
+          invoice_sent_at: new Date(),
+        });
+
+        console.log("Firestore updated with invoice data");
       } catch (err) {
         console.error("invoice PDF fetch failed", err.message);
       }
