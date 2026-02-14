@@ -12,6 +12,7 @@ import admin from "firebase-admin";
 import { Resend } from "resend";
 import crypto from "crypto";
 import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -399,6 +400,23 @@ export default async function handler(req, res) {
 
           const docPdf = new PDFDocument({ margin: 40 });
           const chunks = [];
+          // ===============================
+          // FILIGRANE LOGO WENERGY
+          // ===============================
+
+          try {
+            const [logoBuffer] = await bucket
+              .file("Document mails type/Logo Wenergy.png")
+              .download();
+
+            docPdf.image(logoBuffer, 100, 150, {
+              width: 400,
+              opacity: 0.07
+            });
+
+          } catch (err) {
+            console.error("Logo watermark failed", err.message);
+          }
           const pageWidth = 595;
           const margin = 40;
           const contentWidth = pageWidth - margin * 2;
@@ -462,19 +480,52 @@ export default async function handler(req, res) {
             docPdf.moveDown(0.6);
           });
 
-          docPdf.moveDown(3);
+          // ===============================
+          // QR CODE SECTION
+          // ===============================
+
+          docPdf.moveDown(4); // descend bien plus bas
+
+          // Texte grand + interligne large
+          docPdf.fontSize(16)
+            .font("Helvetica-Bold")
+            .text("Scanner le QR code à l'expédition", {
+              align: "left",
+              lineGap: 8
+            });
+
+          docPdf.moveDown(1);
+
+          docPdf.fontSize(16)
+            .font("Helvetica-Bold")
+            .text("Scanner le QR code à la réception", {
+              align: "left",
+              lineGap: 8
+            });
+
+          docPdf.moveDown(2);
 
           const qrSectionY = docPdf.y;
-          docPdf.font("Helvetica-Bold").fontSize(14).fillColor("black");
-          docPdf.text("Scanner le QR code à l'expédition", margin, qrSectionY);
-          docPdf.moveDown(0.4);
-          docPdf.text("Scanner le QR code à la réception", margin, docPdf.y);
-          docPdf.moveDown(0.8);
-
           const qrSize = 150;
           const qrX = margin + contentWidth - qrSize;
           const qrY = qrSectionY;
-          docPdf.rect(qrX, qrY, qrSize, qrSize).stroke();
+
+          // ===============================
+          // QR CODE RÉEL
+          // ===============================
+
+          const deliveryUrl = `https://wenergy-platforme.vercel.app/delivery/${deliveryToken}`;
+
+          const qrDataUrl = await QRCode.toDataURL(deliveryUrl);
+
+          const qrImage = Buffer.from(
+            qrDataUrl.replace(/^data:image\/png;base64,/, ""),
+            "base64"
+          );
+
+          docPdf.image(qrImage, qrX, qrY, {
+            width: qrSize,
+          });
 
           const pdfBuffer = await new Promise((resolve) => {
             docPdf.on("end", () => resolve(Buffer.concat(chunks)));
