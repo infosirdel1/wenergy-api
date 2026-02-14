@@ -245,8 +245,35 @@ export default async function handler(req, res) {
     }
 
     if (saleOrderState !== "sale") {
-      console.log("signed invoice: state is not sale (state=%s), skip", saleOrderState);
-      return res.status(200).json({ received: true });
+      console.log("signed invoice: state is not sale (state=%s), retrying in 5s", saleOrderState);
+
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      const retryResp = await axios.post(
+        `${ODOO_URL}/web/dataset/call_kw`,
+        {
+          jsonrpc: "2.0",
+          method: "call",
+          params: {
+            model: "sale.order",
+            method: "search_read",
+            args: [[["id", "=", odoo_order_id]]],
+            kwargs: { limit: 1, fields: ["state"] },
+          },
+        },
+        { headers: { Cookie: cookieHeader } }
+      );
+
+      const retryState = retryResp.data?.result?.[0]?.state;
+
+      console.log("signed invoice: retry state=%s", retryState);
+
+      if (retryState !== "sale") {
+        console.log("signed invoice: still not sale, abort");
+        return res.status(200).json({ received: true });
+      }
+
+      console.log("signed invoice: state is sale after retry");
     }
 
     try {
