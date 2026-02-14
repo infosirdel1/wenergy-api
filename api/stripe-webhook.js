@@ -458,6 +458,57 @@ export default async function handler(req, res) {
 
           console.log("✅ Supplier delivery PDF generated");
 
+          // ===============================
+          // SEND SUPPLIER EMAIL (PDF ATTACHED ONLY)
+          // ===============================
+
+          try {
+
+            const supplierEmail = "info.sirdel@gmail.com"; // TEMP fournisseur test
+
+            // Télécharger le PDF depuis Storage pour l'attacher
+            const [supplierPdfBuffer] = await bucket
+              .file(`requests/${data.platform_count}/bon-livraison-fournisseur.pdf`)
+              .download();
+
+            await resend.emails.send({
+              from: "Wenergy <noreply@wenergy-consulting.com>",
+              to: supplierEmail,
+              subject: `Nouvelle commande fournisseur – ${data.request_number || ""}`,
+              html: `
+      <p>Bonjour,</p>
+
+      <p>Veuillez trouver en pièce jointe le bon de livraison fournisseur relatif à la commande :</p>
+
+      <p><strong>${data.request_number || ""}</strong></p>
+
+      <p>Adresse de livraison :</p>
+      <p>
+        ${data.client?.firstName || ""} ${data.client?.lastName || ""}<br>
+        ${data.address?.street || ""} ${data.address?.number || ""}<br>
+        ${data.address?.zipcode || ""} ${data.address?.city || ""}
+      </p>
+
+      <p>Merci de préparer l'expédition.</p>
+
+      <p>Cordialement,<br>
+      Wenergy</p>
+    `,
+              attachments: [
+                {
+                  filename: "bon-livraison-fournisseur.pdf",
+                  content: supplierPdfBuffer.toString("base64"),
+                  encoding: "base64",
+                }
+              ],
+            });
+
+            console.log("✅ Supplier email sent");
+
+          } catch (err) {
+            console.error("❌ Supplier email failed", err.message);
+          }
+
         } catch (err) {
           console.error("❌ Supplier PDF generation failed", err.message);
         }
