@@ -466,6 +466,19 @@ try {
       },
 
       payment_status: "pending",
+
+      supplier_order_snapshot: {
+        created_at: new Date(),
+        lines: Array.isArray(req.body.lines)
+          ? req.body.lines.map(l => ({
+              product_id: l.product_id ?? null,
+              product_name: l.product_name ?? null,
+              quantity: l.quantity ?? 0,
+              unit_price: l.unit_price ?? 0,
+              sku: l.sku ?? null
+            }))
+          : []
+      },
     };
 
     // ===== INSTALLATION (SOURCE DE VÉRITÉ = order_products) =====

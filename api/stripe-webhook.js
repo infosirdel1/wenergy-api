@@ -10,6 +10,7 @@ import Stripe from "stripe";
 import axios from "axios";
 import admin from "firebase-admin";
 import { Resend } from "resend";
+import crypto from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -368,6 +369,25 @@ export default async function handler(req, res) {
           },
           invoice_sent_at: new Date(),
         });
+
+        // ===============================
+        // INIT DELIVERY DATA
+        // ===============================
+
+        const deliveryToken = crypto.randomBytes(32).toString("hex");
+
+        await doc.ref.update({
+          delivery: {
+            status: "pending",
+            token: deliveryToken,
+            shipped_at: null,
+            received_at: null,
+            odoo_order_id: orderId,
+            odoo_order_name: saleOrderName
+          }
+        });
+
+        console.log("delivery initialized");
 
         console.log("Firestore updated with invoice data");
       } catch (err) {
