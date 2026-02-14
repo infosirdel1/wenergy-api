@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     const snapshot = await db
       .collection("requests")
-      .where("platformCount", "==", Number(count))
+      .where("platform_count", "==", Number(count))
       .limit(1)
       .get();
 
