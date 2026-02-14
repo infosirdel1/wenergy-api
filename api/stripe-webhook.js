@@ -24,12 +24,19 @@ if (!admin.apps.length) {
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
     throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 is missing");
   }
+  if (!process.env.FIREBASE_STORAGE_BUCKET) {
+    throw new Error("FIREBASE_STORAGE_BUCKET is missing");
+  }
   const serviceAccount = JSON.parse(
     Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, "base64").toString("utf8")
   );
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  });
 }
 const firestore = admin.firestore();
+const bucket = admin.storage().bucket(process.env.FIREBASE_STORAGE_BUCKET);
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -203,6 +210,101 @@ export default async function handler(req, res) {
       payment_status: "paid",
       updated_at: new Date(),
     });
+
+    const odoo_order_id = orderId;
+    const count = platformCount;
+    const email = data.client && data.client.email ? data.client.email : null;
+    console.log("signed invoice: odoo_order_id=%s count=%s email=%s", odoo_order_id, count, email);
+
+    let saleOrderState;
+    try {
+      const saleReadResp = await axios.post(
+        `${ODOO_URL}/web/dataset/call_kw`,
+        {
+          jsonrpc: "2.0",
+          method: "call",
+          params: {
+            model: "sale.order",
+            method: "search_read",
+            args: [[["id", "=", odoo_order_id]]],
+            kwargs: { limit: 1, fields: ["state"] },
+          },
+          id: Date.now(),
+        },
+        { headers: { Cookie: cookieHeader } }
+      );
+      const saleList = saleReadResp.data?.result;
+      if (!Array.isArray(saleList) || saleList.length === 0) {
+        console.log("signed invoice: sale.order not found, skip");
+        return res.status(200).json({ received: true });
+      }
+      saleOrderState = saleList[0].state;
+    } catch (err) {
+      console.error("signed invoice: Odoo sale.order search_read failed", err.message);
+      return res.status(200).json({ received: true });
+    }
+
+    if (saleOrderState !== "sale") {
+      console.log("signed invoice: state is not sale (state=%s), skip", saleOrderState);
+      return res.status(200).json({ received: true });
+    }
+
+    try {
+      console.log("signed invoice: fetching PDF from Odoo");
+      const signedPdfResp = await axios.get(
+        `${ODOO_URL}/report/pdf/sale.report_saleorder/${odoo_order_id}`,
+        {
+          responseType: "arraybuffer",
+          headers: { Cookie: cookieHeader },
+          timeout: 20000,
+        }
+      );
+      console.log("signed invoice: PDF fetched");
+      const signedPdfBuffer = Buffer.from(signedPdfResp.data);
+      const signedStoragePath = `invoices/${count}_signed.pdf`;
+      const signedFile = bucket.file(signedStoragePath);
+      await signedFile.save(signedPdfBuffer, {
+        contentType: "application/pdf",
+        resumable: false,
+      });
+      console.log("signed invoice: PDF uploaded to %s", signedStoragePath);
+      await doc.ref.update({ signedInvoiceStored: true });
+      console.log("signed invoice: Firestore updated signedInvoiceStored=true");
+    } catch (err) {
+      console.error("signed invoice: failed", err.message);
+    }
+
+    const quotationId = data.quotation_id != null ? data.quotation_id : orderId;
+    const pdfResp = await axios.get(
+      `${ODOO_URL}/report/pdf/sale.report_saleorder/${quotationId}`,
+      {
+        responseType: "arraybuffer",
+        headers: { Cookie: cookieHeader },
+        timeout: 20000,
+      }
+    );
+    console.log("PDF fetched");
+    const pdfBuffer = Buffer.from(pdfResp.data);
+    const storagePath = `requests/${platformCount}/devis-signed-${quotationId}.pdf`;
+    const file = bucket.file(storagePath);
+    await file.save(pdfBuffer, {
+      contentType: "application/pdf",
+      resumable: false,
+    });
+    console.log("PDF uploaded");
+    const [signedUrl] = await file.getSignedUrl({
+      action: "read",
+      expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
+    });
+    await doc.ref.update({
+      "pdfs.devis_signed": {
+        created_at: new Date(),
+        signed_url: signedUrl,
+        storage_path: storagePath,
+      },
+      signed_at: new Date(),
+    });
+    console.log("Firestore updated");
 
     return res.status(200).json({ received: true });
   } catch (err) {
