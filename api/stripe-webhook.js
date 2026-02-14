@@ -331,11 +331,33 @@ export default async function handler(req, res) {
           to: email,
           subject: `Votre commande Wenergy – ${data.quotation_number || ""}`,
           html: `
-      <p>Bonjour,</p>
-      <p>Votre paiement a bien été confirmé.</p>
-      <p>Veuillez trouver en pièce jointe votre devis signé ainsi que les documents contractuels.</p>
-      <p>L'équipe Wenergy</p>
-    `,
+     html: `
+  <p>Bonjour,</p>
+
+  <p>Nous vous remercions pour votre commande auprès de Wenergy.</p>
+
+  <p>Votre paiement a bien été confirmé et votre commande est désormais validée.</p>
+
+  <p>Vous trouverez en pièces jointes :</p>
+
+  <ul>
+    <li><strong>Votre devis signé</strong> – document contractuel confirmant votre commande.</li>
+    <li><strong>Les Conditions Générales de Vente</strong> – cadre légal applicable à votre installation.</li>
+    <li><strong>Le formulaire de rétractation</strong> – conformément à la réglementation en vigueur.</li>
+    <li><strong>La fiche technique produit</strong> – caractéristiques techniques de votre équipement.</li>
+  </ul>
+
+  <p>Votre commande sera préparée et expédiée dans les meilleurs délais.</p>
+
+  <p>Les délais de livraison peuvent varier en raison du poids et du volume des équipements expédiés.  
+  Nous mettons tout en œuvre pour assurer un traitement et une expédition aussi rapides que possible.</p>
+
+  <p>Si vous avez la moindre question, notre équipe reste à votre disposition.</p>
+
+  <p>Bien cordialement,<br>
+  L’équipe Wenergy</p>
+`,
+
           attachments,
         });
 
