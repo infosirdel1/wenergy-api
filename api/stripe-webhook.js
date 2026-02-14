@@ -315,7 +315,39 @@ export default async function handler(req, res) {
         invoiceId = invoices[0].id;
         console.log("invoice: paid invoice found id=%s", invoiceId);
       } else {
-        console.log("invoice: no paid invoice found");
+        console.log("invoice: no paid invoice found, retrying in 5s");
+
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        const retryResp = await axios.post(
+          `${ODOO_URL}/web/dataset/call_kw`,
+          {
+            jsonrpc: "2.0",
+            method: "call",
+            params: {
+              model: "account.move",
+              method: "search_read",
+              args: [[
+                ["invoice_origin", "=", saleOrderName],
+                ["move_type", "=", "out_invoice"],
+                ["state", "=", "posted"],
+                ["payment_state", "=", "paid"]
+              ]],
+              kwargs: { limit: 1, fields: ["id"] },
+            },
+            id: Date.now(),
+          },
+          { headers: { Cookie: cookieHeader } }
+        );
+
+        const retryInvoices = retryResp.data?.result;
+
+        if (Array.isArray(retryInvoices) && retryInvoices.length > 0) {
+          invoiceId = retryInvoices[0].id;
+          console.log("invoice: paid invoice found after retry id=%s", invoiceId);
+        } else {
+          console.log("invoice: still no paid invoice after retry");
+        }
       }
     } catch (err) {
       console.error("invoice search failed", err.message);
