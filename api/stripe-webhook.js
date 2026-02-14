@@ -279,6 +279,64 @@ export default async function handler(req, res) {
       console.log("signed invoice: state is sale after retry");
     }
 
+    // ===============================
+    // FETCH PAID INVOICE FROM ODOO
+    // ===============================
+
+    let invoiceId = null;
+    let invoicePdfBuffer = null;
+
+    try {
+      const invoiceResp = await axios.post(
+        `${ODOO_URL}/web/dataset/call_kw`,
+        {
+          jsonrpc: "2.0",
+          method: "call",
+          params: {
+            model: "account.move",
+            method: "search_read",
+            args: [[
+              ["invoice_origin", "=", data.quotation_number],
+              ["move_type", "=", "out_invoice"],
+              ["state", "=", "posted"],
+              ["payment_state", "=", "paid"]
+            ]],
+            kwargs: { limit: 1, fields: ["id"] },
+          },
+          id: Date.now(),
+        },
+        { headers: { Cookie: cookieHeader } }
+      );
+
+      const invoices = invoiceResp.data?.result;
+      if (Array.isArray(invoices) && invoices.length > 0) {
+        invoiceId = invoices[0].id;
+        console.log("invoice: paid invoice found id=%s", invoiceId);
+      } else {
+        console.log("invoice: no paid invoice found");
+      }
+    } catch (err) {
+      console.error("invoice search failed", err.message);
+    }
+
+    if (invoiceId) {
+      try {
+        const invoicePdfResp = await axios.get(
+          `${ODOO_URL}/report/pdf/account.report_invoice/${invoiceId}`,
+          {
+            responseType: "arraybuffer",
+            headers: { Cookie: cookieHeader },
+            timeout: 20000,
+          }
+        );
+
+        invoicePdfBuffer = Buffer.from(invoicePdfResp.data);
+        console.log("invoice PDF fetched");
+      } catch (err) {
+        console.error("invoice PDF fetch failed", err.message);
+      }
+    }
+
     try {
       console.log("signed invoice: fetching PDF from Odoo");
       const signedPdfResp = await axios.get(
@@ -314,6 +372,14 @@ export default async function handler(req, res) {
         ];
 
         const attachments = [];
+
+        if (invoicePdfBuffer) {
+          attachments.push({
+            filename: `facture-${count}.pdf`,
+            content: invoicePdfBuffer.toString("base64"),
+            encoding: "base64",
+          });
+        }
 
         for (const path of filesToAttach) {
           const [fileBuffer] = await bucket.file(path).download();
