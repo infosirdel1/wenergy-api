@@ -399,36 +399,82 @@ export default async function handler(req, res) {
 
           const docPdf = new PDFDocument({ margin: 40 });
           const chunks = [];
+          const pageWidth = 595;
+          const margin = 40;
+          const contentWidth = pageWidth - margin * 2;
+          const wenergyBlue = "#005BBB";
 
           docPdf.on("data", chunk => chunks.push(chunk));
 
-          docPdf.fontSize(16).text("BON DE LIVRAISON FOURNISSEUR", { align: "center" });
-          docPdf.moveDown();
+          const drawTitle = (title, options = {}) => {
+            docPdf.fillColor(wenergyBlue).fontSize(14).font("Helvetica-Bold");
+            const yBefore = docPdf.y;
+            docPdf.text(title, margin, yBefore, { width: contentWidth, align: options.align || "left" });
+            const yAfter = docPdf.y;
+            docPdf.strokeColor(wenergyBlue).lineWidth(0.5).moveTo(margin, yAfter + 2).lineTo(margin + contentWidth, yAfter + 2).stroke();
+            docPdf.y = yAfter + 6;
+            docPdf.fillColor("black").font("Helvetica").fontSize(options.bodySize || 11);
+          };
 
-          docPdf.fontSize(12).text(`Référence : ${data.request_number || ""}`);
+          const drawHLine = () => {
+            docPdf.strokeColor("black").lineWidth(0.3).moveTo(margin, docPdf.y).lineTo(margin + contentWidth, docPdf.y).stroke();
+            docPdf.moveDown(0.5);
+          };
+
+          docPdf.fontSize(14).font("Helvetica-Bold").fillColor(wenergyBlue);
+          docPdf.text("BON DE LIVRAISON FOURNISSEUR", margin, docPdf.y, { width: contentWidth, align: "center" });
+          const mainTitleY = docPdf.y;
+          docPdf.strokeColor(wenergyBlue).lineWidth(0.5).moveTo(margin, mainTitleY + 4).lineTo(margin + contentWidth, mainTitleY + 4).stroke();
+          docPdf.y = mainTitleY + 10;
+          docPdf.moveDown(0.5);
+          drawHLine();
+          docPdf.fillColor("black").font("Helvetica").fontSize(11);
+
+          drawTitle("INFORMATIONS COMMANDE");
+          docPdf.text(`Référence : ${data.request_number || ""}`);
           docPdf.text(`Commande interne : ${data.platform_count || ""}`);
-          docPdf.moveDown();
+          docPdf.moveDown(1);
 
-          docPdf.text("CLIENT :");
+          drawTitle("CLIENT");
           docPdf.text(`${data.client?.firstName || ""} ${data.client?.lastName || ""}`);
           docPdf.text(`${data.address?.street || ""} ${data.address?.number || ""}`);
           docPdf.text(`${data.address?.zipcode || ""} ${data.address?.city || ""}`);
-          docPdf.moveDown();
-
           docPdf.text(`Préférence livraison : ${data.delivery_preference || ""}`);
-          docPdf.moveDown();
+          docPdf.moveDown(1);
 
-          docPdf.text("PRODUITS :");
-          docPdf.moveDown(0.5);
+          drawTitle("PRODUITS");
+          docPdf.font("Helvetica-Bold").text("Produit", margin, docPdf.y);
+          docPdf.text("Qté", margin + contentWidth - 30, docPdf.y, { width: 30, align: "right" });
+          docPdf.moveDown(0.4);
+          docPdf.font("Helvetica").strokeColor("black").lineWidth(0.2).moveTo(margin, docPdf.y).lineTo(margin + contentWidth, docPdf.y).stroke();
+          docPdf.moveDown(0.4);
 
+          const colQtyX = margin + contentWidth - 35;
           lines.forEach(line => {
-            docPdf.text(`${line.product_name}  x${line.quantity}`);
+            const lineY = docPdf.y;
+            const name = String(line.product_name || "").trim() || "—";
+            const qtyStr = `x${Number(line.quantity) || 0}`;
+            docPdf.fillColor("black").font("Helvetica").fontSize(11);
+            docPdf.text(name, margin, lineY, { width: colQtyX - margin - 10 });
+            const afterNameY = docPdf.y;
+            docPdf.text(qtyStr, colQtyX, lineY, { width: 35, align: "right" });
+            docPdf.y = Math.max(afterNameY, lineY + 14);
+            docPdf.moveDown(0.6);
           });
 
-          docPdf.moveDown(2);
+          docPdf.moveDown(3);
 
-          docPdf.rect(350, docPdf.y, 200, 120).stroke();
-          docPdf.text("QR CODE", 420, docPdf.y - 100);
+          const qrSectionY = docPdf.y;
+          docPdf.font("Helvetica-Bold").fontSize(14).fillColor("black");
+          docPdf.text("Scanner le QR code à l'expédition", margin, qrSectionY);
+          docPdf.moveDown(0.4);
+          docPdf.text("Scanner le QR code à la réception", margin, docPdf.y);
+          docPdf.moveDown(0.8);
+
+          const qrSize = 150;
+          const qrX = margin + contentWidth - qrSize;
+          const qrY = qrSectionY;
+          docPdf.rect(qrX, qrY, qrSize, qrSize).stroke();
 
           const pdfBuffer = await new Promise((resolve) => {
             docPdf.on("end", () => resolve(Buffer.concat(chunks)));
