@@ -34,10 +34,32 @@ export default async function handler(req, res) {
     const data = doc.data();
 
     // 🔹 Mise à jour livraison
-    await doc.ref.update({
-      "delivery.status": "shipped",
-      "delivery.shipped_at": admin.firestore.FieldValue.serverTimestamp(),
-    });
+   const currentStatus = data.delivery?.status;
+
+let pageType = "neutral";
+
+if (!currentStatus || currentStatus === "pending") {
+
+  await doc.ref.update({
+    "delivery.status": "shipped",
+    "delivery.shipped_at": admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  pageType = "shipped";
+
+} else if (currentStatus === "shipped") {
+
+  await doc.ref.update({
+    "delivery.status": "received",
+    "delivery.received_at": admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  pageType = "received";
+
+} else if (currentStatus === "received") {
+
+  pageType = "neutral";
+}
 
     // 🔹 Données dynamiques
     const requestNumber = data.request_number || "";
@@ -50,6 +72,29 @@ export default async function handler(req, res) {
     const zipcode = data.address?.zipcode || "";
     const city = data.address?.city || "";
 
+    // 🔹 Variables page dynamique
+let title = "";
+let statusText = "";
+let svgColor = "";
+
+if (pageType === "shipped") {
+  title = "Expédition confirmée";
+  statusText = "✔ Expédiée avec succès";
+  svgColor = "#1E90FF";
+}
+
+if (pageType === "received") {
+  title = "Réception confirmée";
+  statusText = "✔ Réception validée";
+  svgColor = "#16a34a";
+}
+
+if (pageType === "neutral") {
+  title = "Commande déjà traitée";
+  statusText = "✔ Livraison déjà confirmée";
+  svgColor = "#6b7280";
+}
+    
     return res.status(200).send(`
 <!DOCTYPE html>
 <html lang="fr">
