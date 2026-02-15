@@ -510,7 +510,7 @@ export default async function handler(req, res) {
           // QR CODE RÉEL
           // ===============================
 
-          const deliveryUrl = `https://wenergy-platforme.vercel.app/delivery/${deliveryToken}`;
+      const deliveryUrl = `https://wenergy-api.vercel.app/api/scan?count=${data.platform_count}`;
 
           const qrDataUrl = await QRCode.toDataURL(deliveryUrl);
 
