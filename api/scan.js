@@ -1,4 +1,7 @@
 import admin from "firebase-admin";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -45,6 +48,37 @@ if (!currentStatus || currentStatus === "pending") {
     "delivery.shipped_at": admin.firestore.FieldValue.serverTimestamp(),
   });
 
+// 🔹 Envoi email expédition
+if (!data.delivery?.email_shipped_sent && data.client?.email) {
+
+  await resend.emails.send({
+    from: "Wenergy <noreply@wenergy-consulting.com>",
+    to: data.client.email,
+    subject: `Votre commande ${data.request_number || ""} a été expédiée`,
+    html: `
+      <p>Bonjour ${data.client?.firstName || ""},</p>
+
+      <p>Votre commande <strong>${data.request_number || ""}</strong> vient d’être expédiée.</p>
+
+      <p>Adresse de livraison :</p>
+
+      <p>
+        ${data.address?.street || ""}<br>
+        ${data.address?.zipcode || ""} ${data.address?.city || ""}
+      </p>
+
+      <p>Nous vous remercions pour votre confiance.</p>
+
+      <p>Cordialement,<br>L’équipe Wenergy</p>
+    `
+  });
+
+  await doc.ref.update({
+    "delivery.email_shipped_sent": true
+  });
+
+}
+
   pageType = "shipped";
 
 } else if (currentStatus === "shipped") {
@@ -53,6 +87,50 @@ if (!currentStatus || currentStatus === "pending") {
     "delivery.status": "received",
     "delivery.received_at": admin.firestore.FieldValue.serverTimestamp(),
   });
+
+// 🔹 Envoi email réception
+if (!data.delivery?.email_received_sent && data.client?.email) {
+
+  const installationType = data.installation_type || "";
+
+  let installationMessage = "";
+
+  if (installationType === "self") {
+    installationMessage = `
+      <p>Vous pouvez procéder à l'installation dès maintenant en suivant les instructions fournies.</p>
+    `;
+  } else {
+    installationMessage = `
+      <p><strong>Important :</strong> Si votre installation est prévue par un technicien Wenergy, merci de ne pas déballer ni utiliser le matériel avant son intervention.</p>
+    `;
+  }
+
+  await resend.emails.send({
+    from: "Wenergy <noreply@wenergy-consulting.com>",
+    to: data.client.email,
+    subject: `🎉 Félicitations ! Votre commande ${data.request_number || ""} est bien arrivée`,
+    html: `
+      <p>Bonjour ${data.client?.firstName || ""},</p>
+
+      <p><strong>Bonne nouvelle !</strong> 🎉</p>
+
+      <p>Votre commande <strong>${data.request_number || ""}</strong> a bien été livrée.</p>
+
+      ${installationMessage}
+
+      <p>Nous vous remercions sincèrement pour votre confiance.</p>
+
+      <p>Bienvenue dans l'univers Wenergy ⚡</p>
+
+      <p>Cordialement,<br>L’équipe Wenergy</p>
+    `
+  });
+
+  await doc.ref.update({
+    "delivery.email_received_sent": true
+  });
+
+}
 
   pageType = "received";
 
